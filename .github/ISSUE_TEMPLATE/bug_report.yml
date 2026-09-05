@@ -10,6 +10,13 @@ body:
         不确定的信息可以写“未知”或“暂无法确认”。填写方法见[反馈指南](https://github.com/90le/steward-feedback/blob/main/CONTRIBUTING.md)。
         本表单公开可见：请勿提交密钥、Webhook 地址、私聊原文或个人身份信息，截图和日志需先脱敏。
         安全漏洞请按[上游安全政策](https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md)私密报告。
+  - type: input
+    id: public-proposer
+    attributes:
+      label: 提出者公开署名（可选）
+      description: 可填允许公开的名称或代号，也可留空。代他人登记时不要把自己写成原始提出者；勿填 Octo UID、群号或联系方式。
+    validations:
+      required: false
   - type: textarea
     id: scenario-and-actual
     attributes:
@@ -54,7 +61,7 @@ body:
   - type: textarea
     id: evidence-and-links
     attributes:
-      label: 补充材料或相关 Issue（可选）
-      description: 可贴相关 Issue 链接、脱敏截图或必要的短日志。请先移除凭证、Webhook 地址和身份信息。
+      label: 公开来源、补充材料或相关 Issue（可选）
+      description: 可贴公开来源或相关 Issue 链接、脱敏截图和必要的短日志；非公开来源只写来源类型，勿贴会话链接、私聊原文或身份标识。
     validations:
       required: false
