@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全漏洞（上游安全政策）
+    url: https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md
+    about: 按上游政策所列渠道私密报告，请勿在公开 Issue 中披露漏洞细节。

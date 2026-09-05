@@ -1,0 +1,47 @@
+name: Feature 需求
+description: 提出 octo-server 的新能力或体验改进需求。
+title: "[Feature] "
+labels: ["type/feature", "priority/p2", "status/triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先[搜索已有 Issue（含已关闭事项）](https://github.com/90le/steward-feedback/issues?q=is%3Aissue)，相同需求请补充到原记录。
+        说明用户问题和目标结果即可，无需决定实现方案；不确定的内容可留待澄清。填写方法见[反馈指南](https://github.com/90le/steward-feedback/blob/main/CONTRIBUTING.md)。
+        本表单公开可见：请勿提交密钥、Webhook 地址、私聊原文或个人身份信息，附件需先脱敏。
+  - type: textarea
+    id: problem-and-scenario
+    attributes:
+      label: 用户问题与使用场景
+      description: 哪类用户在什么场景下遇到了什么困难？使用角色代称，不填写真实身份信息。
+      placeholder: 描述希望完成的任务，以及目前遇到的障碍。
+    validations:
+      required: true
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: 希望获得的结果
+      description: 改进后，用户希望能做什么、看到什么变化？无需指定数据库、接口或框架。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收期待（可选）
+      description: 你会通过什么操作或可见结果判断改进有效？尚不明确可写“待讨论”。
+    validations:
+      required: false
+  - type: textarea
+    id: constraints-and-alternatives
+    attributes:
+      label: 当前替代办法、影响或约束（可选）
+      description: 可说明现在如何处理、影响哪些任务，以及需考虑的使用限制。无需估算未知数据。
+    validations:
+      required: false
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: 相关事项或补充材料（可选）
+      description: 如有相似 Issue，请贴链接并说明差异；附件请先脱敏。
+    validations:
+      required: false
