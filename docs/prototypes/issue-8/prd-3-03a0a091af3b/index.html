@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="utf-8" />
+<title>群投票截止时间修改原型 (Issue #8, PRD v3)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", Arial, sans-serif; margin: 0; padding: 16px; background: #f5f6f8; color: #202124; }
+  .app { max-width: 880px; margin: 0 auto; display: grid; gap: 12px; }
+  .card { background: #fff; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  h2 { font-size: 15px; margin: 0 0 8px; }
+  .muted { color: #666; font-size: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  label { font-size: 13px; }
+  select, input[type="datetime-local"], button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; background: #fff; }
+  button { cursor: pointer; }
+  button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  button.primary:disabled { background: #9bb7e0; border-color: #9bb7e0; cursor: not-allowed; }
+  button.secondary { background: #fff; }
+  .poll { border: 1px solid #e3e5e8; border-radius: 8px; padding: 12px; margin-top: 8px; }
+  .poll .title { font-weight: 600; margin-bottom: 4px; }
+  .options { display: grid; gap: 6px; margin: 8px 0; }
+  .option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: #f7f8fa; }
+  .bar { flex: 1; height: 6px; background: #e6e8ec; border-radius: 3px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: #1a73e8; }
+  .count { font-size: 12px; color: #555; min-width: 32px; text-align: right; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 11px; background: #eef; color: #335; margin-left: 4px; }
+  .badge.closed { background: #fde7e7; color: #a52a2a; }
+  .toast { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 6px; z-index: 20; }
+  .toast > div { background: #202124; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; max-width: 320px; }
+  .toast > div.ok { background: #137333; }
+  .toast > div.err { background: #a50e0e; }
+  .notice-list { display: grid; gap: 6px; }
+  .notice { padding: 6px 8px; background: #fff8e1; border-left: 3px solid #f5b400; border-radius: 4px; font-size: 13px; }
+  .notice.read { opacity: .6; background: #f1f3f4; border-left-color: #bbb; }
+  .kv { font-size: 12px; color: #555; }
+  .danger { color: #a50e0e; }
+  .ok { color: #137333; }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .modal-mask.on { display: flex; }
+  .modal { background: #fff; border-radius: 8px; padding: 16px; width: min(420px, 92vw); }
+  .footer-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #eef4ff; color: #1a56a0; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="card">
+    <h1>群投票 · 发起人修改截止时间（交互原型）</h1>
+    <div class="muted">关联 Issue #8 · PRD v3。本页面为演示原型，非 Octo 真实功能；数据仅在内存中模拟。</div>
+    <div class="row" style="margin-top:10px">
+      <label>当前身份：</label>
+      <select id="identity" data-testid="identity-switch">
+        <option value="u_alice">Alice（发起人，群成员）</option>
+        <option value="u_bob">Bob（已投票成员）</option>
+        <option value="u_carol">Carol（未投票成员）</option>
+        <option value="u_dave">Dave（其他群成员，非发起人）</option>
+        <option value="u_admin">Admin（群管理员，非发起人）</option>
+      </select>
+      <span class="muted" id="mode-tag" data-testid="mode-tag">模式：本地模拟</span>
+      <button class="secondary" id="reset-btn" data-testid="reset-btn">重置演示数据</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>我的通知 <span class="muted" data-testid="notice-count-wrap">(未读 <span id="notice-count" data-testid="notice-count">0</span>)</span></h2>
+    <div class="notice-list" id="notice-list" data-testid="notice-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>群内投票列表</h2>
+    <div id="poll-list" data-testid="poll-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="muted">
+      边界说明：本原型只演示"发起人在未截止前修改自己发起投票的截止时间"，不涉及题目/选项/资格修改，不改变已投票记录，
+      不主动向未投票成员或全群广播独立提示。修改失败保持原截止时间。服务端会独立校验身份和状态，不只依赖前端禁按钮。
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="edit-modal" data-testid="edit-modal">
+  <div class="modal">
+    <h2 style="margin-top:0">修改截止时间</h2>
+    <div class="kv" id="edit-poll-title" data-testid="edit-poll-title"></div>
+    <div class="kv">原截止时间：<span id="edit-old" data-testid="edit-old"></span></div>
+    <div class="row" style="margin-top:8px">
+      <label for="edit-input">新截止时间：</label>
+      <input type="datetime-local" id="edit-input" data-testid="edit-input" />
+    </div>
+    <div class="kv muted" style="margin-top:6px">
+      规则：必须晚于当前时间；允许早于原截止时间（提前结束）。同一投票是否可多次修改由 PRD 开放问题 Q4 决定，原型不设次数限制。
+    </div>
+    <div class="footer-btns">
+      <button class="secondary" id="edit-cancel" data-testid="edit-cancel">取消</button>
+      <button class="primary" id="edit-submit" data-testid="edit-submit">提交</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-testid="toast"></div>
+
+<script>
+(function(){
+  const hasApi = document.documentElement.hasAttribute('data-api') || document.body.hasAttribute('data-api');
+  const modeTag = document.getElementById('mode-tag');
+  modeTag.textContent = '模式：' + (hasApi ? '真实后端 (fetch /api)' : '本地模拟（无后端）');
+
+  // ---- Local mock state (used when no backend) ----
+  const USERS = {
+    u_alice: { id: 'u_alice', name: 'Alice', role: 'member' },
+    u_bob:   { id: 'u_bob',   name: 'Bob',   role: 'member' },
+    u_carol: { id: 'u_carol', name: 'Carol', role: 'member' },
+    u_dave:  { id: 'u_dave',  name: 'Dave',  role: 'member' },
+    u_admin: { id: 'u_admin', name: 'Admin', role: 'admin' },
+  };
+  function nowIso(){ return new Date().toISOString(); }
+  function futureIso(minutes){ return new Date(Date.now() + minutes*60000).toISOString(); }
+  function pastIso(minutes){ return new Date(Date.now() - minutes*60000).toISOString(); }
+
+  function seedState(){
+    return {
+      polls: [
+        {
+          id: 'p1', title: '周五团建去哪家？', ownerId: 'u_alice',
+          options: [ {id:'o1', text:'火锅'}, {id:'o2', text:'烧烤'}, {id:'o3', text:'轻食'} ],
+          deadline: futureIso(60), createdAt: pastIso(30),
+          votes: { u_bob: 'o1' },  // Bob 已投火锅
+          notified: {}, // 记录每次 deadline 修改是否已通知某用户，key = pollId + ':' + changeSeq
+          changeSeq: 0,
+        },
+        {
+          id: 'p2', title: '下季度技术分享主题', ownerId: 'u_dave',
+          options: [ {id:'a','text':'性能'}, {id:'b', text:'安全'}, {id:'c', text:'AI'} ]
+            .map(o => ({id:o.id, text:o.text})),
+          deadline: futureIso(120), createdAt: pastIso(10),
+          votes: {},
+          notified: {}, changeSeq: 0,
+        },
+        {
+          id: 'p3', title: '已截止：办公室零食采购', ownerId: 'u_alice',
+          options: [ {id:'x1', text:'坚果'}, {id:'x2', text:'饼干'} ],
+          deadline: pastIso(30), createdAt: pastIso(200),
+          votes: { u_bob: 'x1', u_carol: 'x2' },
+          notified: {}, changeSeq: 0,
+        }
+      ],
+      // 用户维度的通知（服务端会写入这里；这里模拟）
+      notices: { u_alice: [], u_bob: [], u_carol: [], u_dave: [], u_admin: [] },
+    };
+  }
+  let state = seedState();
+
+  // ---- Helpers ----
+  function toast(msg, kind){
+    const el = document.createElement('div');
+    if (kind) el.className = kind;
+    el.textContent = msg;
+    el.setAttribute('data-testid', 'toast-item');
+    document.getElementById('toast').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+  function fmt(iso){
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function toLocalInput(iso){
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fromLocalInput(v){
+    // treat as local time
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+  function currentUserId(){ return document.getElementById('identity').value; }
+
+  // ---- API layer: real vs mock ----
+  async function api(path, opts){
+    if (hasApi){
+      const headers = Object.assign({'x-user-id': currentUserId(), 'content-type': 'application/json'}, (opts && opts.headers) || {});
+      const res = await fetch(path, Object.assign({}, opts||{}, { headers }));
+      const text = await res.text();
+      let body = null;
+      try { body = text ? JSON.parse(text) : null; } catch { body = { raw: text }; }
+      return { ok: res.ok, status: res.status, body };
+    }
+    return mockApi(path, opts);
+  }
+
+  function mockApi(path, opts){
+    opts = opts || {};
+    const method = (opts.method || 'GET').toUpperCase();
+    const uid = currentUserId();
+    // GET /api/polls
+    if (method === 'GET' && path === '/api/polls'){
+      return Promise.resolve({ ok:true, status:200, body: { polls: state.polls.map(p => publicPoll(p, uid)) } });
+    }
+    // GET /api/notices
+    if (method === 'GET' && path === '/api/notices'){
+      return Promise.resolve({ ok:true, status:200, body: { notices: state.notices[uid] || [] } });
+    }
+    // POST /api/notices/:id/read
+    let m;
+    if (method === 'POST' && (m = path.match(/^\/api\/notices\/([^/]+)\/read$/))){
+      const list = state.notices[uid] || [];
+      const n = list.find(x => x.id === m[1]);
+      if (!n) return Promise.resolve({ ok:false, status:404, body:{ error:'notice_not_found' } });
+      n.read = true;
+      return Promise.resolve({ ok:true, status:200, body:{ ok:true } });
+    }
+    // POST /api/polls/:id/vote  {optionId}
+    if (method === 'POST' && (m = path.match(/^\/api\/polls\/([^/]+)\/vote$/))){
+      const p = state.polls.find(x => x.id === m[1]);
+      if (!p) return Promise.resolve({ ok:false, status:404, body:{ error:'poll_not_found' } });
+      if (new Date(p.deadline).getTime() <= Date.now())
+        return Promise.resolve({ ok:false, status:409, body:{ error:'poll_closed', message:'投票已截止' } });
+      const body = JSON.parse(opts.body || '{}');
+      const opt = p.options.find(o => o.id === body.optionId);
+      if (!opt) return Promise.resolve({ ok:false, status:400, body:{ error:'bad_option' } });
+      p.votes[uid] = opt.id;
+      return Promise.resolve({ ok:true, status:200, body:{ ok:true } });
+    }
+    // PATCH /api/polls/:id/deadline  {deadline}
+    if (method === 'PATCH' && (m = path.match(/^\/api\/polls\/([^/]+)\/deadline$/))){
+      const p = state.polls.find(x => x.id === m[1]);
+      if (!p) return Promise.resolve({ ok:false, status:404, body:{ error:'poll_not_found' } });
+      if (p.ownerId !== uid) return Promise.resolve({ ok:false, status:403, body:{ error:'not_owner', message:'仅发起人可修改' } });
+      if (new Date(p.deadline).getTime() <= Date.now())
+        return Promise.resolve({ ok:false, status:409, body:{ error:'poll_closed', message:'投票已截止，无法再修改截止时间' } });
+      const body = JSON.parse(opts.body || '{}');
+      const newIso = body.deadline;
+      const t = new Date(newIso).getTime();
+      if (!newIso || isNaN(t))
+        return Promise.resolve({ ok:false, status:400, body:{ error:'bad_deadline', message:'截止时间格式不正确' } });
+      if (t <= Date.now())
+        return Promise.resolve({ ok:false, status:400, body:{ error:'deadline_not_future', message:'新截止时间必须晚于当前时间' } });
+      const oldDeadline = p.deadline;
+      p.deadline = new Date(t).toISOString();
+      p.changeSeq += 1;
+      // 只向已投票成员写入一次通知（同一次修改不重复）
+      const voters = Object.keys(p.votes);
+      const seqKey = p.id + ':' + p.changeSeq;
+      voters.forEach(v => {
+        state.notices[v] = state.notices[v] || [];
+        const already = state.notices[v].some(n => n.pollId === p.id && n.changeSeq === p.changeSeq);
+        if (!already){
+          state.notices[v].push({
+            id: 'n_' + Math.random().toString(36).slice(2,10),
+            pollId: p.id, changeSeq: p.changeSeq,
+            title: `投票『${p.title}』截止时间已变更`,
+            oldDeadline, newDeadline: p.deadline,
+            createdAt: nowIso(), read: false,
+          });
+        }
+      });
+      return Promise.resolve({ ok:true, status:200, body:{ ok:true, poll: publicPoll(p, uid) } });
+    }
+    // POST /api/reset  (test hook)
+    if (method === 'POST' && path === '/api/reset'){
+      state = seedState();
+      return Promise.resolve({ ok:true, status:200, body:{ ok:true } });
+    }
+    return Promise.resolve({ ok:false, status:404, body:{ error:'not_found' } });
+  }
+
+  function publicPoll(p, uid){
+    const counts = {};
+    p.options.forEach(o => counts[o.id] = 0);
+    Object.values(p.votes).forEach(oid => { if (counts[oid] != null) counts[oid]++; });
+    return {
+      id: p.id, title: p.title, ownerId: p.ownerId,
+      options: p.options.map(o => ({ id:o.id, text:o.text, count: counts[o.id] })),
+      deadline: p.deadline, createdAt: p.createdAt,
+      totalVotes: Object.keys(p.votes).length,
+      myVote: p.votes[uid] || null,
+      isClosed: new Date(p.deadline).getTime() <= Date.now(),
+      isOwner: p.ownerId === uid,
+    };
+  }
+
+  // ---- Rendering ----
+  async function refresh(){
+    const [pollsRes, noticesRes] = await Promise.all([api('/api/polls'), api('/api/notices')]);
+    renderPolls(pollsRes.body && pollsRes.body.polls || []);
+    renderNotices(noticesRes.body && noticesRes.body.notices || []);
+  }
+
+  function renderPolls(polls){
+    const root = document.getElementById('poll-list');
+    root.innerHTML = '';
+    polls.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'poll';
+      el.setAttribute('data-testid', 'poll-' + p.id);
+      const closedBadge = p.isClosed ? '<span class="badge closed" data-testid="badge-closed">已截止</span>' : '<span class="badge" data-testid="badge-open">进行中</span>';
+      const ownerBadge = p.isOwner ? '<span class="tag" data-testid="tag-owner">发起人</span>' : '';
+      el.innerHTML = `
+        <div class="title">${escapeHtml(p.title)} ${ownerBadge} ${closedBadge}</div>
+        <div class="kv">发起人：${p.ownerId} · 截止时间：<span data-testid="deadline-${p.id}">${fmt(p.deadline)}</span> · 已投：${p.totalVotes}</div>
+        <div class="options" data-testid="options-${p.id}"></div>
+        <div class="row" data-testid="actions-${p.id}"></div>
+      `;
+      const opts = el.querySelector('.options');
+      const total = Math.max(1, p.totalVotes);
+      p.options.forEach(o => {
+        const row = document.createElement('div');
+        row.className = 'option';
+        const pct = Math.round((o.count / total) * 100);
+        const selected = p.myVote === o.id ? '✅ ' : '';
+        row.innerHTML = `
+          <button class="secondary" data-testid="vote-${p.id}-${o.id}" ${p.isClosed || p.myVote ? 'disabled' : ''}>${selected}${escapeHtml(o.text)}</button>
+          <div class="bar"><span style="width:${pct}%"></span></div>
+          <div class="count" data-testid="count-${p.id}-${o.id}">${o.count}</div>
+        `;
+        row.querySelector('button').addEventListener('click', () => vote(p.id, o.id));
+        opts.appendChild(row);
+      });
+      const actions = el.querySelector('.row');
+      // 编辑按钮：仅当身份是发起人且未截止时显示（服务端也会独立校验）
+      if (p.isOwner && !p.isClosed){
+        const btn = document.createElement('button');
+        btn.className = 'primary';
+        btn.textContent = '修改截止时间';
+        btn.setAttribute('data-testid', 'edit-btn-' + p.id);
+        btn.addEventListener('click', () => openEdit(p));
+        actions.appendChild(btn);
+      } else {
+        const hint = document.createElement('span');
+        hint.className = 'muted';
+        if (!p.isOwner) hint.textContent = '（非发起人，无法修改截止时间）';
+        else if (p.isClosed) hint.textContent = '（已截止，无法再修改截止时间）';
+        hint.setAttribute('data-testid', 'edit-hint-' + p.id);
+        actions.appendChild(hint);
+      }
+      // 提供隐藏的"强试"按钮用于测试服务端独立校验（仅在有后端时）
+      if (hasApi && (!p.isOwner || p.isClosed)){
+        const force = document.createElement('button');
+        force.className = 'secondary';
+        force.textContent = '尝试直接调用 API（应被服务端拒绝）';
+        force.setAttribute('data-testid', 'force-edit-' + p.id);
+        force.addEventListener('click', () => forceEdit(p.id));
+        actions.appendChild(force);
+      }
+      root.appendChild(el);
+    });
+  }
+
+  function renderNotices(list){
+    const root = document.getElementById('notice-list');
+    root.innerHTML = '';
+    const unread = list.filter(n => !n.read).length;
+    document.getElementById('notice-count').textContent = unread;
+    if (list.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'muted';
+      empty.textContent = '暂无通知';
+      empty.setAttribute('data-testid', 'notice-empty');
+      root.appendChild(empty);
+      return;
+    }
+    list.slice().sort((a,b) => (a.createdAt < b.createdAt ? 1 : -1)).forEach(n => {
+      const el = document.createElement('div');
+      el.className = 'notice' + (n.read ? ' read' : '');
+      el.setAttribute('data-testid', 'notice-' + n.id);
+      el.innerHTML = `
+        <div><strong>${escapeHtml(n.title)}</strong></div>
+        <div class="kv">原截止：${fmt(n.oldDeadline)} → 新截止：${fmt(n.newDeadline)}</div>
+        <div class="row" style="margin-top:4px">
+          <button class="secondary" data-testid="notice-open-${n.id}">查看投票</button>
+          ${n.read ? '' : `<button class="secondary" data-testid="notice-read-${n.id}">标为已读</button>`}
+        </div>
+      `;
+      el.querySelector(`[data-testid="notice-open-${n.id}"]`).addEventListener('click', () => {
+        const target = document.querySelector(`[data-testid="poll-${n.pollId}"]`);
+        if (target) target.scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+      if (!n.read){
+        el.querySelector(`[data-testid="notice-read-${n.id}"]`).addEventListener('click', async () => {
+          const r = await api('/api/notices/' + n.id + '/read', { method:'POST' });
+          if (r.ok) refresh();
+        });
+      }
+      root.appendChild(el);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---- Actions ----
+  async function vote(pollId, optionId){
+    const r = await api('/api/polls/' + pollId + '/vote', { method:'POST', body: JSON.stringify({ optionId }) });
+    if (r.ok){ toast('已投票', 'ok'); refresh(); }
+    else { toast('投票失败：' + (r.body && r.body.message || r.body && r.body.error || '未知错误'), 'err'); }
+  }
+
+  let editing = null;
+  function openEdit(p){
+    editing = p;
+    document.getElementById('edit-poll-title').textContent = '投票：' + p.title;
+    document.getElementById('edit-old').textContent = fmt(p.deadline);
+    document.getElementById('edit-input').value = toLocalInput(p.deadline);
+    document.getElementById('edit-modal').classList.add('on');
+  }
+  function closeEdit(){
+    editing = null;
+    document.getElementById('edit-modal').classList.remove('on');
+  }
+  document.getElementById('edit-cancel').addEventListener('click', closeEdit);
+  document.getElementById('edit-submit').addEventListener('click', submitEdit);
+
+  async function submitEdit(){
+    if (!editing) return;
+    const raw = document.getElementById('edit-input').value;
+    const iso = fromLocalInput(raw);
+    if (!iso){ toast('请填写有效的截止时间', 'err'); return; }
+    const r = await api('/api/polls/' + editing.id + '/deadline', { method:'PATCH', body: JSON.stringify({ deadline: iso }) });
+    if (r.ok){
+      toast('截止时间已更新', 'ok');
+      closeEdit();
+      refresh();
+    } else {
+      const msg = r.body && (r.body.message || r.body.error) || '修改失败';
+      toast('修改失败：' + msg + '（原截止时间保持不变）', 'err');
+    }
+  }
+
+  async function forceEdit(pollId){
+    // 前端不做限制，直接发；用于验证服务端独立校验
+    const iso = new Date(Date.now() + 30*60000).toISOString();
+    const r = await api('/api/polls/' + pollId + '/deadline', { method:'PATCH', body: JSON.stringify({ deadline: iso }) });
+    if (r.ok) toast('（意外）服务端接受了修改', 'err');
+    else toast('服务端拒绝：' + (r.body && (r.body.message || r.body.error) || r.status), 'ok');
+  }
+
+  document.getElementById('identity').addEventListener('change', refresh);
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    if (hasApi){ await api('/api/reset', { method:'POST' }); }
+    else { state = seedState(); }
+    toast('演示数据已重置', 'ok');
+    refresh();
+  });
+
+  refresh();
+})();
+</script>
+<footer style="padding:16px;text-align:center;font-size:12px;color:#64748b">作者：Octo 小码（runtimeId: implementation） · 独立测试角色：Octo 小检（runtimeId: verification） · PRD v3 / 候选 r1</footer></body>
+</html>
