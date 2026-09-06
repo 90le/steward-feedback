@@ -1,0 +1,57 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: R16/AC20 主流程：可信入口用允许 header 能加载本人提醒；两个入口映射同一本人\nok 1 - R16/AC20 主流程：可信入口用允许 header 能加载本人提醒；两个入口映射同一本人\n  ---\n  duration_ms: 235.086927\n  type: 'test'\n  ...\n# Subtest: 身份边界：缺失/非法身份头拒绝；他人的提醒不可操作（R6/AC9）\nok 2 - 身份边界：缺失/非法身份头拒绝；他人的提醒不可操作（R6/AC9）\n  ---\n  duration_ms: 23.48946\n  type: 'test'\n  ...\n# Subtest: R1/R2/AC1 设置延后后 state=snoozed；AC7/R8 过去时间校验失败且保持原状态；R15/AC19 失败不呈现成功\nok 3 - R1/R2/AC1 设置延后后 state=snoozed；AC7/R8 过去时间校验失败且保持原状态；R15/AC19 失败不呈现成功\n  ---\n  duration_ms: 62.184906\n  type: 'test'\n  ...\n# Subtest: R9/AC10/AC15 明确处理立即取消延后且跨入口一致\nok 4 - R9/AC10/AC15 明确处理立即取消延后且跨入口一致\n  ---\n  duration_ms: 12.838116\n  type: 'test'\n  ...\n# Subtest: R17/AC21 后端权威时间校验：+15m/+1h/+1d 之类的合法未来时间均可成功保存\nok 5 - R17/AC21 后端权威时间校验：+15m/+1h/+1d 之类的合法未来时间均可成功保存\n  ---\n  duration_ms: 16.373602\n  type: 'test'\n  ...\n# Subtest: 原消息定位：/api/reminders/:id/message 返回原消息内容与会话切片（R3/AC3/AC14）\nok 6 - 原消息定位：/api/reminders/:id/message 返回原消息内容与会话切片（R3/AC3/AC14）\n  ---\n  duration_ms: 6.84791\n  type: 'test'\n  ...\n# Subtest: / 入口注入 data-api=\"1\"（R16 联调模式声明）\nok 7 - / 入口注入 data-api=\"1\"（R16 联调模式声明）\n  ---\n  duration_ms: 4.475131\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 7\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 641.146232\n",
+  "stderr": "",
+  "tests": 7,
+  "passed": true,
+  "testDigest": "c2209014e20d7eb349974adadb4302e7850cbfdbe737762db44e5d3ae918bd1d",
+  "candidateDigest": "8260ca7d366993a506835acab41b0173b57eca282e314910230ff1da19b9262a",
+  "checkedAt": "2026-09-06T20:39:38.299Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "候选服务端 /api/reminders 只依赖预览窄桥允许的 X-Acting-User（写入接口另加 Content-Type: application/json），身份合法即返回本人提醒，AC20/R16 的入口加载在 HTTP 层通过；u_alice 与 u_alice2 映射到同一本人 owner，两入口看到相同集合。",
+      "服务端对 snoozeUntil 做权威 > now 校验：过去时间返回 400 且 ok=false、reminder 状态未变（R8/AC7、R15/AC19 的失败不呈现成功、失败保持原状态）；合法未来时间成功后 state=snoozed。",
+      "+15 分钟 / +1 小时 / +1 天 对应的未来时间戳都能保存成功，验证了 R17/AC21 的可见快捷项在服务端不会被判为过去时间；同一提醒 /message 返回原消息内容与整条会话切片，支持 AC3/AC14 的真实定位而非只回文字。",
+      "身份与业务边界严格：缺失或非法 X-Acting-User 401；跨用户对 Bob 的提醒 snooze 返回 403 且 Bob 状态未变（R6/AC9）；已 done 的提醒再 snooze 返回 409。",
+      "浏览器未执行：本次仅在无头 Node HTTP 层验证服务端契约；index.html 中的编辑输入保护（R13/AC17）、快捷项在页面时钟下的实际渲染与点击流程需要浏览器验收，本轮未跑。前端在本轮也未被独立联调，只从代码走读确认仅发送允许 header 且 quick presets 在点击时才取值。"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/04230351c42a698ad07016b59f539044e95450fbd6205684783f675051250e50/r1 node --test --test-reporter=tap /artifacts/jobs/04230351c42a698ad07016b59f539044e95450fbd6205684783f675051250e50/r1/acceptance.test.mjs => 1..7 pass 7 fail 0（duration_ms≈671）",
+    "checks": [
+      {
+        "criterion": "R16/AC20 可信入口用允许 header 加载本人提醒，两入口映射同一本人",
+        "passed": true
+      },
+      {
+        "criterion": "身份缺失/非法拒绝；跨用户操作 403 且他人状态未变（R6/AC9）",
+        "passed": true
+      },
+      {
+        "criterion": "R1/AC1 合法未来时间可设置为 snoozed；AC7/R8 过去时间校验失败并保持原状态；R15/AC19 失败不呈现成功",
+        "passed": true
+      },
+      {
+        "criterion": "R9/AC10/AC15 明确 done 立即取消 snooze 且入口 A/B 一致；已 done 不可再 snooze",
+        "passed": true
+      },
+      {
+        "criterion": "R17/AC21 +15m/+1h/+1d 对应的未来时间点在服务端权威校验下均可成功保存",
+        "passed": true
+      },
+      {
+        "criterion": "R3/AC3/AC14 /message 返回原消息内容与会话切片而非仅文字提示",
+        "passed": true
+      },
+      {
+        "criterion": "/ 入口注入 data-api=\"1\" 声明联调模式",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器端 UI 验收（编辑输入保持、快捷项渲染、真实高亮定位等）",
+        "passed": false
+      }
+    ]
+  }
+}
