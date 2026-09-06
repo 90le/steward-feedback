@@ -1,0 +1,76 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: AC1/AC7 设置稍后提醒(隐藏) & 时间校验拒绝\nok 1 - AC1/AC7 设置稍后提醒(隐藏) & 时间校验拒绝\n  ---\n  duration_ms: 238.187534\n  type: 'test'\n  ...\n# Subtest: AC3 到点重现为未处理\nok 2 - AC3 到点重现为未处理\n  ---\n  duration_ms: 12.744824\n  type: 'test'\n  ...\n# Subtest: AC4 修改时间 & AC5 取消\nok 3 - AC4 修改时间 & AC5 取消\n  ---\n  duration_ms: 49.115903\n  type: 'test'\n  ...\n# Subtest: AC9 服务端拒绝对他人提醒 snooze/done\nok 4 - AC9 服务端拒绝对他人提醒 snooze/done\n  ---\n  duration_ms: 12.156934\n  type: 'test'\n  ...\n# Subtest: AC10/AC11 明确处理清延后 & 仅查看不清延后\nok 5 - AC10/AC11 明确处理清延后 & 仅查看不清延后\n  ---\n  duration_ms: 17.752561\n  type: 'test'\n  ...\n# Subtest: AC12 操作只影响本人; 他人同 messageId 提醒不变\nok 6 - AC12 操作只影响本人; 他人同 messageId 提醒不变\n  ---\n  duration_ms: 10.497604\n  type: 'test'\n  ...\n# Subtest: AC8 已处理提醒不能再 snooze，状态保留\nok 7 - AC8 已处理提醒不能再 snooze，状态保留\n  ---\n  duration_ms: 11.128893\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 7\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 632.516406\n",
+  "stderr": "",
+  "tests": 7,
+  "passed": true,
+  "testDigest": "28da57b3886438b240b08253f503e0ea8729e838be0caa5d2dfdc12dac6647a5",
+  "candidateDigest": "69b5622f2da83b91f9d695d8ed0c70a9b5d0989c013d2d9d8151c8708bf05248",
+  "checkedAt": "2026-09-06T12:55:01.388Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "POST /api/reminders/:id/snooze 正确设置 snoozeUntil 并在视图中变 snoozed，到点重现为 active，满足 AC1/AC3/R1-R3",
+      "服务端独立时间校验 until>now (X-Now 传递 NOW=2027)，不合法返回 400/INVALID_TIME 且提醒状态保留，满足 AC7/AC8/R7/R8",
+      "修改 snoozeUntil 与 DELETE 取消延后立即恢复 active，满足 AC4/AC5/R4",
+      "身份边界：非本人 snooze 返回 403/FORBIDDEN，无 X-User-Id 返回 401；u2/u3 看不到 u1 的 r1；u1 状态未被 u2 越权请求改动，满足 AC9/R6",
+      "明确 done 清除 snoozeUntil 且到达原 until 不重现；仅 view 仅记录 viewedAt 不改 status/snoozeUntil，到点仍按 AC3 重现；满足 AC10/AC11/R9/R10",
+      "同 messageId=m100 的 r1(u1)/r4(u2)/r6(u3) 各自独立：u1 对 r1 的 snooze/done 未改动 r4/r6 的 view/status/snoozeUntil，满足 AC12/R11",
+      "已 done 的提醒 POST snooze 返回 409/ALREADY_DONE 且状态保持 done；不存在 id 返回 404，覆盖失败可感知",
+      "浏览器 UI/前端 index.html 交互未执行，仅通过 HTTP 接口验证服务端语义；README 声明的原消息实体不存在，AC6 由接口未触碰原消息隐式满足（无独立可验证证据）"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/b2acbb8e74f0e9fc7afe2df460676a129821c93fe2278419612a1a6f66a3441b/r1 node --test --test-reporter=tap /artifacts/jobs/b2acbb8e74f0e9fc7afe2df460676a129821c93fe2278419612a1a6f66a3441b/r1/acceptance.test.mjs -> pass 7 fail 0 (duration_ms 622)",
+    "checks": [
+      {
+        "criterion": "AC1 设置稍后再提醒后视图变 snoozed，隐藏于活跃",
+        "passed": true
+      },
+      {
+        "criterion": "AC3 到达 until 后重现为 active 未处理",
+        "passed": true
+      },
+      {
+        "criterion": "AC4 可修改延后时间到新未来时间点",
+        "passed": true
+      },
+      {
+        "criterion": "AC5 可取消延后并立即恢复 active",
+        "passed": true
+      },
+      {
+        "criterion": "AC7 until<=now 被服务端拒绝且原提醒状态保留",
+        "passed": true
+      },
+      {
+        "criterion": "AC8 已 done 无法再 snooze / 未知 id 有明确错误",
+        "passed": true
+      },
+      {
+        "criterion": "AC9 非本人操作被服务端 403 拒绝，未认证 401",
+        "passed": true
+      },
+      {
+        "criterion": "AC10 延后中 done 清除 snoozeUntil，到点不再重现",
+        "passed": true
+      },
+      {
+        "criterion": "AC11 延后中仅 view 不影响 snoozeUntil，到点仍重现",
+        "passed": true
+      },
+      {
+        "criterion": "AC12 操作仅影响本人，同 messageId 他人提醒不受影响",
+        "passed": true
+      },
+      {
+        "criterion": "AC6 原消息零改动（原型无原消息实体，未执行 UI/群消息层面验证）",
+        "passed": false
+      },
+      {
+        "criterion": "浏览器端 UI 交互与前端联调模式（data-api）",
+        "passed": false
+      }
+    ]
+  }
+}
