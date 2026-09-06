@@ -1,47 +1,76 @@
-# octo-server 反馈与需求池
+# Steward · Octo 产品管家与交付团队
 
-这里收集 **octo-server 的 Bug 和功能需求**，并在 Issue 中跟踪澄清、PRD、评审与修订记录。
+**从一个产品问题，到有依据的答复、可追踪的需求和可操作的演示。**
 
-上游源码位于 [Mininglamp-OSS/octo-server](https://github.com/Mininglamp-OSS/octo-server)。Steward 团队只读查阅上游源码；本仓库不托管上游代码，也不负责代码合并或软件发布。
+Steward 在 OpenClaw 上运行五个 Agent，通过 Octo 接收问题和反馈，用本仓库保存 Issue、PRD、独立评审、演示代码与测试记录。Agent 负责调查与判断，后台 Worker 根据真实状态自动交接工作。
 
-## 从这里开始
+[项目介绍](docs/overview.md) · [打开真实演示](https://90le.github.io/steward-feedback/prototypes/issue-8/prd-3-03a0a091af3b/index.html) · [查看需求池](https://github.com/90le/steward-feedback/issues) · [交付与验证](docs/delivery.md)
 
-| 你想做什么 | 入口 |
+## 一条自动接续的流程
+
+```mermaid
+flowchart TB
+    U[Octo 产品问题或反馈] --> S[小丘：调查、澄清、查重]
+    S -->|问答| A[源码依据或明确未知]
+    S -->|反馈| I[GitHub Issue]
+    I -->|Feature| P[小助：PRD]
+    P --> R[小衡：独立评审]
+    R -->|修订| P
+    R -->|PRD 就绪| D[小码：演示开发]
+    D --> T[小检：实际测试]
+    T --> F[小衡：交付复核]
+    F --> O[预览、代码、报告]
+    O --> N[小丘回原会话]
+    I -->|定时发现变化| N
+    A --> N
+```
+
+PRD 通过后，已启用的自动开发流程接续工作，**不需要在群里逐个 @ 指挥**。Bug 默认归档并跟踪；Feature 才进入 PRD 流程。评审或测试不通过时修订，超出自动修订范围则提出具体待决问题。完整失败分支见[协作流程](docs/workflow.md)。
+
+## 五个角色，各自承担责任
+
+| Agent | runtimeId | 职责 |
+| --- | --- | --- |
+| **Octo 小丘** | `support-public` | 产品问答、反馈澄清、语义查重、收单、状态解释与结果汇总。 |
+| **Octo 小助** | `product` | PRD 起草与修订，只写用户目标、范围和可感知的验收标准。 |
+| **Octo 小衡** | `reviewer` | 独立评审 PRD、知识和演示交付；针对具体版本提出意见。 |
+| **Octo 小码** | `implementation` | 根据通过评审的 PRD，开发可运行的演示前端与后端。 |
+| **Octo 小检** | `verification` | 独立编写并执行测试，提交可复跑的测试文件与结果。 |
+
+Octo 小测是配置放行的外部联调提问 Bot，不属于这五个团队 Agent。GitHub 统一发布账号不代表产物作者；交付记录标明实际角色、`runtimeId`、运行 ID 和版本。
+
+## 怎样使用
+
+| 你想做什么 | 入口与行为 |
 | --- | --- |
-| 先查重、查看进度 | [搜索所有 Issue，包含已关闭事项](https://github.com/90le/steward-feedback/issues?q=is%3Aissue) |
-| 报告已有行为异常 | [提交 Bug](https://github.com/90le/steward-feedback/issues/new?template=bug_report.yml) |
-| 提出新能力或体验改进 | [提交 Feature](https://github.com/90le/steward-feedback/issues/new?template=feature_request.yml) |
-| 不确定如何分类 | [选择模板或新建空白 Issue](https://github.com/90le/steward-feedback/issues/new/choose) |
-| 了解填写方法与公开资料边界 | [反馈指南](CONTRIBUTING.md) |
-| 区分提出者、登记者、接单者与产物作者 | [业务署名与来源](CONTRIBUTING.md#业务署名与来源) |
-| 看懂分类、优先级与进度 | [标签与状态](docs/labels.md) |
-| 整理或评审需求 | [PRD 模板](docs/templates/prd.md) · [评审模板](docs/templates/review.md) |
+| 询问产品行为 | 在已接入群向小丘自然提问，或私聊小丘；源码结论应带路径、行号及提交链接。 |
+| 反馈 Bug / Feature | 先[查已有事项](https://github.com/90le/steward-feedback/issues?q=is%3Aissue)，再向小丘描述，或填写 [Bug](https://github.com/90le/steward-feedback/issues/new?template=bug_report.yml) / [Feature](https://github.com/90le/steward-feedback/issues/new?template=feature_request.yml) 表单。 |
+| 补充或查进展 | 在原 Issue 补充具体版本和问题；也可以向小丘询问事项编号对应的进度。 |
+| 直接向其他角色发任务 | 仅配置负责人、观察者、放行 Bot 可用；群里需要原生 UID @，私聊按账号与用户隔离。 |
 
-在已接入且开通收单的 Octo 会话中，也可向小丘反馈。收到 Issue 链接后，请在该事项中继续补充，避免重复建单。
+小丘无需被 @，但只参与相关产品问题、反馈与追问；闲聊、明确写给其他人的消息保持静默。普通人只通过小丘问答、反馈和查状态；其反馈可以进入固定自动流程，但不获得直接调度其他角色或批准产物的权限。未放行 Bot 全部静默，自家 Bot 不互相接话。详见[参与权限](docs/architecture.md#参与权限)。
 
-## 三个角色
+## 已有真实样例
 
-| 角色 | 职责 |
+**[#8：投票发起人修改未截止投票的截止时间](https://github.com/90le/steward-feedback/issues/8)** 已经过 PRD 打回、修订和复审，再自动进入小码开发、小检实际测试、小衡复核与原会话回报。
+
+- [PRD v3](https://github.com/90le/steward-feedback/issues/8#issuecomment-5555649074) · [独立评审](https://github.com/90le/steward-feedback/issues/8#issuecomment-5555650888)
+- [五角色交付记录](https://github.com/90le/steward-feedback/issues/8#issuecomment-5558075155) · [前后端代码、测试和报告](docs/prototypes/issue-8/prd-3-03a0a091af3b/README.md)
+- 独立 HTTP 测试 4 项通过；此样例额外完成前后端与静态预览两种模式、各 12 项浏览器操作检查。
+
+公开 Pages 是静态模拟预览，下载代码后可运行演示后端。**PRD 就绪、演示完成、上游功能上线是不同状态。** 本仓库是需求池与演示产物库，不托管 Steward 运行源码或凭证，也不写入只读上游 [octo-server](https://github.com/Mininglamp-OSS/octo-server)。
+
+## 项目文档
+
+| 想了解什么 | 文档 |
 | --- | --- |
-| **小丘**（产品管家） | 产品问答、澄清场景、查重、收单与状态回报。 |
-| **小助**（PRD 作者） | 根据原始诉求撰写 PRD，回应补充信息和评审意见，修订文档。 |
-| **小衡**（独立评审） | 对照原始诉求与具体 PRD 版本，检查目标、范围和用户验收标准。作者不能自审。 |
+| 三分钟讲清项目、设计取舍与亮点 | [项目介绍](docs/overview.md) |
+| Gateway、Agent、Worker、数据与权限关系 | [架构与资源边界](docs/architecture.md) |
+| 问答、收单、PRD、开发、定时追踪、人工求助 | [协作流程](docs/workflow.md) |
+| 九域知识、源码版本、失效重审与引用 | [知识与证据](docs/knowledge.md) |
+| 实际完成了什么，哪些尚未验证 | [交付与验证记录](docs/delivery.md) |
+| 如何反馈、署名与提供安全资料 | [反馈指南](CONTRIBUTING.md) |
+| 标签、关闭原因和产物阶段 | [标签与状态](docs/labels.md) |
+| 起草、评审与交付记录 | [PRD 模板](docs/templates/prd.md) · [评审模板](docs/templates/review.md) · [交付模板](docs/templates/delivery.md) |
 
-GitHub 上显示的统一发布账号不等同于业务执行 Agent。业务记录应注明实际 Agent 显示名和 `runtimeId`，并关联提出者、登记与接单记录、具体版本、日期和产物链接；人类提出者只使用允许公开的名称或代号。详见[署名约定与复制模板](CONTRIBUTING.md#业务署名与来源)。
-
-## 预期协作流程
-
-1. **查重与登记**：先搜索已有事项；重复反馈补充到原 Issue。信息不足时，只补充判断问题所需的事实。
-2. **分类与澄清**：记录类型、影响和优先级，默认 `priority/p2`。Bug 留下可追踪的缺陷记录；功能需求进入 PRD 流程。Bug 不默认进入 PRD 流程。
-3. **起草与评审**：小助写明用户问题、目标结果、范围和验收期待；小衡评审对应版本。需要修订时，小助逐项回应后再交评审；需要用户决策时，先澄清。
-4. **PRD 就绪与后续跟踪**：独立评审通过后标记 `status/prd-ready`。新增诉求或修改范围仍需复核，旧评审只覆盖当时的版本。
-
-**PRD 就绪表示需求文档已通过评审，不表示已经开发、修复或发布。** Issue 的打开、关闭及关闭原因需另外查看；具体含义见[标签与状态](docs/labels.md)。
-
-以上说明预期协作方式。自动收单、扫描、PRD 流转和通知的可用性取决于实际接入与验收状态，不能由本文认定已稳定运行。请以 Issue 中已发布的产物、评审结论和实际回执为准；本仓库不承诺响应或软件交付时限。
-
-登记、接单等过程记录可留在 Issue 内；群内只回报结果、必要澄清或需人工处理的阻碍，没有变化时保持静默。你也可以关注 Issue，并在原记录中补充复现条件、使用场景或针对具体 PRD 版本的意见。
-
-## 公开提交前
-
-Issue、评论及附件公开可见。请勿提交密钥、Webhook 地址、私聊原文或个人身份信息；截图和日志需先脱敏。安全漏洞请使用[上游安全政策](https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md)所列渠道私密报告。
+更新依据：2026-09-06 的 mvp-038 运行核验与公开产物。群内只发送结果、必要澄清或需处理的阻碍；无变化扫描不调用模型、不发消息。公开提交前请移除凭证、私聊原文、群号及个人敏感信息；安全问题使用[上游安全政策](https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md)规定的私密渠道。
