@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="utf-8" />
+<title>提醒稍后再提醒（snooze）原型</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --border: #e2e6ee;
+    --text: #1f2933;
+    --muted: #6b7580;
+    --accent: #2f6fed;
+    --accent-weak: #e6efff;
+    --danger: #d64545;
+    --danger-weak: #fdecec;
+    --ok: #1f8a4c;
+    --ok-weak: #e6f4ec;
+    --snoozed: #b4680a;
+    --snoozed-weak: #fdf3df;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif; }
+  header { background: #202b3a; color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .mode { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #2f6fed; }
+  header .mode.local { background: #6b7580; }
+  header .clock { font-size: 12px; color: #c8d0dc; margin-left: auto; }
+  main { max-width: 1180px; margin: 0 auto; padding: 12px 16px 40px; display: grid;
+    grid-template-columns: 260px 1fr 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .panel h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .btn { border: 1px solid var(--border); background: #fff; color: var(--text);
+    padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .btn:hover { border-color: #b8c1cf; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: #2657c4; }
+  .btn.danger { color: var(--danger); border-color: #eebfbf; background: #fff; }
+  .btn.small { padding: 3px 8px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .who-list { display: flex; flex-direction: column; gap: 6px; }
+  .who { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #fff; }
+  .who.active { border-color: var(--accent); background: var(--accent-weak); }
+  .who .name { font-weight: 600; }
+  .who .sub { font-size: 12px; color: var(--muted); }
+  .reminders { display: flex; flex-direction: column; gap: 8px; }
+  .reminder { border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: #fff; }
+  .reminder.snoozed { border-color: #e9c380; background: var(--snoozed-weak); }
+  .reminder.done { opacity: .7; background: var(--ok-weak); border-color: #b7d9c3; }
+  .reminder .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .reminder .from { font-weight: 600; }
+  .reminder .when { color: var(--muted); font-size: 12px; }
+  .reminder .msg { margin: 6px 0; color: #33404f; }
+  .reminder .state { font-size: 12px; padding: 2px 6px; border-radius: 10px; display: inline-block; }
+  .reminder .state.active { background: var(--accent-weak); color: var(--accent); }
+  .reminder .state.snoozed { background: #fdf0d9; color: var(--snoozed); }
+  .reminder .state.done { background: var(--ok-weak); color: var(--ok); }
+  .reminder .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .snooze-panel { margin-top: 8px; padding: 8px; border: 1px dashed #b8c1cf; border-radius: 6px; background: #fafbfd; }
+  .snooze-panel .row { flex-wrap: wrap; gap: 6px; }
+  .snooze-panel input[type=datetime-local] { padding: 4px 6px; font: inherit; border: 1px solid var(--border); border-radius: 4px; }
+  .snooze-panel .hint { font-size: 12px; color: var(--muted); }
+  .snooze-panel .err { font-size: 12px; color: var(--danger); background: var(--danger-weak); padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
+  .snooze-panel .ok { font-size: 12px; color: var(--ok); background: var(--ok-weak); padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
+  .toast { position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    background: #202b3a; color: #fff; padding: 10px 14px; border-radius: 6px;
+    font-size: 13px; max-width: 320px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+  .toast.err { background: var(--danger); }
+  .toast.ok { background: var(--ok); }
+  .chat { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; max-height: 620px; overflow: auto; }
+  .chat h2 { margin-top: 0; }
+  .chat-hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .msg-item { padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; background: #f8f9fc; border-left: 3px solid transparent; }
+  .msg-item.highlighted { background: #fff6d6; border-left-color: #e6a700; box-shadow: 0 0 0 1px #e6c25a inset; }
+  .msg-item .who { font-weight: 600; font-size: 12px; color: #33404f; }
+  .msg-item .body { color: #1f2933; }
+  .msg-item .time { font-size: 11px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; padding: 12px; text-align: center; }
+  .quick { display: flex; gap: 4px; flex-wrap: wrap; }
+  .badge { font-size: 11px; background: #eef1f7; color: #5b6778; padding: 1px 6px; border-radius: 8px; }
+  .flag { font-size: 11px; color: var(--muted); }
+  .now-info { font-size: 11px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Octo 提醒 · 稍后再提醒原型</h1>
+  <span id="mode-badge" class="mode local" data-testid="mode-badge">本地模拟</span>
+  <span class="clock" data-testid="server-clock">服务器时间：--</span>
+</header>
+
+<main>
+  <section class="panel" aria-label="身份切换">
+    <h2>模拟入口 / 身份</h2>
+    <div class="who-list" id="who-list" data-testid="who-list"></div>
+    <div style="margin-top:10px">
+      <button type="button" class="btn small" data-testid="refresh-btn" id="refresh-btn">立即刷新</button>
+      <span class="flag" data-testid="last-refresh" id="last-refresh"></span>
+    </div>
+    <div class="now-info" data-testid="now-info" id="now-info"></div>
+  </section>
+
+  <section class="panel" aria-label="本人提醒列表">
+    <h2>我的提醒（活跃）</h2>
+    <div id="reminders" class="reminders" data-testid="reminders"></div>
+    <h2 style="margin-top:14px">已延后</h2>
+    <div id="reminders-snoozed" class="reminders" data-testid="reminders-snoozed"></div>
+    <h2 style="margin-top:14px">已处理</h2>
+    <div id="reminders-done" class="reminders" data-testid="reminders-done"></div>
+  </section>
+
+  <section class="chat" aria-label="原消息查看区">
+    <h2>原会话消息</h2>
+    <div class="chat-hint" data-testid="chat-hint" id="chat-hint">
+      在提醒项点击「查看原消息」将真实定位到下面对应位置并高亮。
+    </div>
+    <div id="chat-list" data-testid="chat-list"></div>
+  </section>
+</main>
+
+<div id="toast-area" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Mode detection ----------
+  var IS_BACKEND = document.documentElement.getAttribute('data-api') === '1';
+  var modeBadge = document.getElementById('mode-badge');
+  modeBadge.textContent = IS_BACKEND ? '联调模式（后端）' : '本地模拟';
+  modeBadge.classList.toggle('local', !IS_BACKEND);
+
+  // ---------- Fixed seed data ----------
+  var USERS = [
+    { id: 'u_alice', name: 'Alice（本人 · 入口 A）', note: '常用手机端' },
+    { id: 'u_alice2', name: 'Alice（本人 · 入口 B）', note: '同一人 · 网页端刷新视图' },
+    { id: 'u_bob', name: 'Bob（同群成员）', note: '仅用于对比 R6/AC2' }
+  ];
+  // Both u_alice and u_alice2 represent SAME person id "u_alice" server-side
+  var ACTING_TO_USER = { u_alice: 'u_alice', u_alice2: 'u_alice', u_bob: 'u_bob' };
+
+  var CHAT = [
+    { id: 'm1', from: '张经理', time: '10:02', body: '下周一路演材料请大家 @Alice @Bob 帮忙确认。' },
+    { id: 'm2', from: '李工',   time: '10:05', body: '@Alice 帮忙看下附件里的接口字段。' },
+    { id: 'm3', from: '小丘',   time: '10:07', body: '公告：会议室 3 号 15:00 空闲。' },
+    { id: 'm4', from: '张经理', time: '10:12', body: '@Bob 麻烦确认下发布节奏。' },
+    { id: 'm5', from: '李工',   time: '10:20', body: '@Alice 顺便帮忙订下午茶，谢谢。' }
+  ];
+
+  // ---------- Local state (mock backend when IS_BACKEND=false) ----------
+  // reminders per owner id
+  function nowMs() { return Date.now(); }
+  function iso(t) { return new Date(t).toISOString(); }
+
+  var localState = {
+    reminders: [
+      { id: 'r_a_1', ownerId: 'u_alice', messageId: 'm2', fromName: '李工', createdAt: nowMs()-600000, snoozeUntil: null, done: false },
+      { id: 'r_a_2', ownerId: 'u_alice', messageId: 'm5', fromName: '李工', createdAt: nowMs()-120000, snoozeUntil: null, done: false },
+      { id: 'r_b_1', ownerId: 'u_bob',   messageId: 'm1', fromName: '张经理', createdAt: nowMs()-900000, snoozeUntil: null, done: false },
+      { id: 'r_b_2', ownerId: 'u_bob',   messageId: 'm4', fromName: '张经理', createdAt: nowMs()-300000, snoozeUntil: null, done: false }
+    ]
+  };
+
+  // ---------- UI state ----------
+  var actingId = 'u_alice';
+  var toastTimer = null;
+  var refreshTimer = null;
+  var lastServerData = null; // last snapshot from server or local
+  // editing map: reminderId -> { value:string(datetime-local), lastErr:string, lastOk:string, open:true }
+  var editing = Object.create(null);
+  var highlightedMsgId = null;
+  var highlightTimer = null;
+  var inflight = 0; // to throttle overlapping polls
+
+  // ---------- Helpers ----------
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function toLocalInput(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate())
+      + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function fromLocalInput(s) {
+    // parse "YYYY-MM-DDTHH:mm" as local time
+    if (!s || typeof s !== 'string') return NaN;
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if (!m) return NaN;
+    var d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0), 0);
+    return d.getTime();
+  }
+  function fmtTs(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate())
+      + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+  function toast(text, kind) {
+    var area = document.getElementById('toast-area');
+    area.innerHTML = '';
+    var el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.setAttribute('data-testid', 'toast');
+    el.textContent = text;
+    area.appendChild(el);
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { area.innerHTML = ''; }, 3200);
+  }
+
+  // ---------- Local mock API (mirrors server semantics) ----------
+  function localList(actingUserId) {
+    var owner = ACTING_TO_USER[actingUserId] || actingUserId;
+    var t = nowMs();
+    // Return owner's reminders with derived active flag
+    var list = localState.reminders.filter(function (r) { return r.ownerId === owner; });
+    return {
+      now: t,
+      reminders: list.map(function (r) { return normalize(r, t); })
+    };
+  }
+  function normalize(r, t) {
+    var expired = r.snoozeUntil && r.snoozeUntil <= t;
+    return {
+      id: r.id,
+      ownerId: r.ownerId,
+      messageId: r.messageId,
+      fromName: r.fromName,
+      createdAt: r.createdAt,
+      snoozeUntil: r.snoozeUntil,
+      done: r.done,
+      // derived
+      state: r.done ? 'done' : (r.snoozeUntil && !expired ? 'snoozed' : 'active'),
+      expired: !!expired
+    };
+  }
+  function localSnooze(actingUserId, reminderId, untilMs) {
+    var owner = ACTING_TO_USER[actingUserId] || actingUserId;
+    var r = localState.reminders.find(function (x) { return x.id === reminderId; });
+    if (!r) return { ok: false, code: 404, error: '提醒不存在' };
+    if (r.ownerId !== owner) return { ok: false, code: 403, error: '只能操作本人的提醒' };
+    if (r.done) return { ok: false, code: 409, error: '提醒已处理，无法延后' };
+    var t = nowMs();
+    if (!(typeof untilMs === 'number' && isFinite(untilMs))) return { ok: false, code: 400, error: '时间格式无效' };
+    if (untilMs <= t) return { ok: false, code: 400, error: '再次提醒时间必须晚于当前时间（服务器时间 ' + fmtTs(t) + '）', now: t };
+    r.snoozeUntil = untilMs;
+    return { ok: true, reminder: normalize(r, t), now: t };
+  }
+  function localCancel(actingUserId, reminderId) {
+    var owner = ACTING_TO_USER[actingUserId] || actingUserId;
+    var r = localState.reminders.find(function (x) { return x.id === reminderId; });
+    if (!r) return { ok: false, code: 404, error: '提醒不存在' };
+    if (r.ownerId !== owner) return { ok: false, code: 403, error: '只能操作本人的提醒' };
+    r.snoozeUntil = null;
+    var t = nowMs();
+    return { ok: true, reminder: normalize(r, t), now: t };
+  }
+  function localMarkDone(actingUserId, reminderId) {
+    var owner = ACTING_TO_USER[actingUserId] || actingUserId;
+    var r = localState.reminders.find(function (x) { return x.id === reminderId; });
+    if (!r) return { ok: false, code: 404, error: '提醒不存在' };
+    if (r.ownerId !== owner) return { ok: false, code: 403, error: '只能操作本人的提醒' };
+    r.done = true;
+    r.snoozeUntil = null;
+    var t = nowMs();
+    return { ok: true, reminder: normalize(r, t), now: t };
+  }
+  function localGetMessage(actingUserId, reminderId) {
+    var owner = ACTING_TO_USER[actingUserId] || actingUserId;
+    var r = localState.reminders.find(function (x) { return x.id === reminderId; });
+    if (!r) return { ok: false, code: 404, error: '提醒不存在' };
+    if (r.ownerId !== owner) return { ok: false, code: 403, error: '只能查看本人提醒的原消息' };
+    var msg = CHAT.find(function (m) { return m.id === r.messageId; });
+    if (!msg) return { ok: false, code: 404, error: '原消息已被删除' };
+    return { ok: true, message: msg, chat: CHAT, snapshotAt: nowMs() };
+  }
+
+  // ---------- Backend fetch wrapper ----------
+  function apiCall(method, path, body) {
+    // If IS_BACKEND is false, resolve locally
+    if (!IS_BACKEND) {
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          var res;
+          if (method === 'GET' && path === '/api/reminders') {
+            res = { ok: true, data: localList(actingId) };
+          } else if (method === 'POST' && /^\/api\/reminders\/[^/]+\/snooze$/.test(path)) {
+            var id1 = path.split('/')[3];
+            var r = localSnooze(actingId, id1, body && body.snoozeUntil);
+            res = r.ok ? { ok: true, data: r } : { ok: false, status: r.code, error: r.error, data: r };
+          } else if (method === 'POST' && /^\/api\/reminders\/[^/]+\/cancel$/.test(path)) {
+            var id2 = path.split('/')[3];
+            var r2 = localCancel(actingId, id2);
+            res = r2.ok ? { ok: true, data: r2 } : { ok: false, status: r2.code, error: r2.error, data: r2 };
+          } else if (method === 'POST' && /^\/api\/reminders\/[^/]+\/done$/.test(path)) {
+            var id3 = path.split('/')[3];
+            var r3 = localMarkDone(actingId, id3);
+            res = r3.ok ? { ok: true, data: r3 } : { ok: false, status: r3.code, error: r3.error, data: r3 };
+          } else if (method === 'GET' && /^\/api\/reminders\/[^/]+\/message$/.test(path)) {
+            var id4 = path.split('/')[3];
+            var r4 = localGetMessage(actingId, id4);
+            res = r4.ok ? { ok: true, data: r4 } : { ok: false, status: r4.code, error: r4.error };
+          } else {
+            res = { ok: false, status: 404, error: 'not found' };
+          }
+          resolve(res);
+        }, 20);
+      });
+    }
+    // Backend
+    var opts = {
+      method: method,
+      headers: { 'X-Acting-User': actingId, 'Accept': 'application/json' }
+    };
+    if (body != null) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    inflight++;
+    return fetch(path, opts).then(function (resp) {
+      return resp.json().then(function (json) {
+        return { ok: resp.ok, status: resp.status, data: json, error: json && json.error };
+      }).catch(function () {
+        return { ok: false, status: resp.status, error: '响应解析失败' };
+      });
+    }).catch(function (e) {
+      return { ok: false, status: 0, error: '网络异常：' + (e && e.message || e) };
+    }).then(function (r) { inflight--; return r; });
+  }
+
+  // ---------- Rendering ----------
+  function renderUsers() {
+    var el = document.getElementById('who-list');
+    el.innerHTML = '';
+    USERS.forEach(function (u) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'who' + (u.id === actingId ? ' active' : '');
+      b.setAttribute('data-testid', 'who-' + u.id);
+      b.innerHTML = '<div class="name"></div><div class="sub"></div>';
+      b.querySelector('.name').textContent = u.name;
+      b.querySelector('.sub').textContent = u.note;
+      b.addEventListener('click', function () {
+        actingId = u.id;
+        // switching acting user should re-fetch fresh view (AC15/AC16)
+        renderUsers();
+        // Don't clear editing across users: editing is keyed by reminder id which is per-owner distinct.
+        refresh(true);
+      });
+      el.appendChild(b);
+    });
+  }
+
+  function renderChat(highlightId) {
+    var el = document.getElementById('chat-list');
+    el.innerHTML = '';
+    CHAT.forEach(function (m) {
+      var d = document.createElement('div');
+      d.className = 'msg-item' + (m.id === highlightId ? ' highlighted' : '');
+      d.setAttribute('data-testid', 'chat-msg-' + m.id);
+      var w = document.createElement('div'); w.className = 'who'; w.textContent = m.from + ' · ' + m.time;
+      var b = document.createElement('div'); b.className = 'body'; b.textContent = m.body;
+      d.appendChild(w); d.appendChild(b);
+      el.appendChild(d);
+    });
+    if (highlightId) {
+      var target = el.querySelector('[data-testid="chat-msg-' + highlightId + '"]');
+      if (target && target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'auto' });
+    }
+  }
+
+  function reminderCard(r) {
+    var card = document.createElement('div');
+    card.className = 'reminder ' + r.state;
+    card.setAttribute('data-testid', 'reminder-' + r.id);
+    card.setAttribute('data-state', r.state);
+
+    var top = document.createElement('div'); top.className = 'top';
+    var from = document.createElement('div'); from.className = 'from';
+    from.textContent = '来自 ' + r.fromName + '（' + r.messageId + '）';
+    var stateSpan = document.createElement('span');
+    stateSpan.className = 'state ' + r.state;
+    stateSpan.setAttribute('data-testid', 'reminder-state-' + r.id);
+    stateSpan.textContent = r.state === 'active' ? '未处理'
+                         : r.state === 'snoozed' ? ('延后中 · 到 ' + fmtTs(r.snoozeUntil))
+                         : '已处理';
+    top.appendChild(from); top.appendChild(stateSpan);
+
+    var msg = CHAT.find(function (m) { return m.id === r.messageId; });
+    var body = document.createElement('div'); body.className = 'msg';
+    body.textContent = msg ? ('『' + msg.body + '』') : '（原消息已删除）';
+
+    var actions = document.createElement('div'); actions.className = 'actions';
+
+    if (r.state === 'active' || r.state === 'snoozed') {
+      var snoozeBtn = document.createElement('button');
+      snoozeBtn.type = 'button';
+      snoozeBtn.className = 'btn small';
+      snoozeBtn.setAttribute('data-testid', 'btn-snooze-' + r.id);
+      snoozeBtn.textContent = r.state === 'snoozed' ? '修改再提醒时间' : '稍后再提醒';
+      snoozeBtn.addEventListener('click', function () { openEdit(r); });
+      actions.appendChild(snoozeBtn);
+    }
+
+    if (r.state === 'snoozed') {
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'btn small';
+      cancelBtn.setAttribute('data-testid', 'btn-cancel-' + r.id);
+      cancelBtn.textContent = '取消延后';
+      cancelBtn.addEventListener('click', function () { doCancel(r); });
+      actions.appendChild(cancelBtn);
+    }
+
+    if (!r.done) {
+      var doneBtn = document.createElement('button');
+      doneBtn.type = 'button';
+      doneBtn.className = 'btn small primary';
+      doneBtn.setAttribute('data-testid', 'btn-done-' + r.id);
+      doneBtn.textContent = '标记为已处理';
+      doneBtn.addEventListener('click', function () { doDone(r); });
+      actions.appendChild(doneBtn);
+    }
+
+    var viewBtn = document.createElement('button');
+    viewBtn.type = 'button';
+    viewBtn.className = 'btn small';
+    viewBtn.setAttribute('data-testid', 'btn-view-' + r.id);
+    viewBtn.textContent = '查看原消息';
+    viewBtn.addEventListener('click', function () { doView(r); });
+    actions.appendChild(viewBtn);
+
+    card.appendChild(top);
+    card.appendChild(body);
+    card.appendChild(actions);
+
+    // Editing panel
+    if (editing[r.id] && editing[r.id].open) {
+      card.appendChild(buildEditor(r));
+    }
+
+    return card;
+  }
+
+  function buildEditor(r) {
+    var ed = editing[r.id];
+    var wrap = document.createElement('div');
+    wrap.className = 'snooze-panel';
+    wrap.setAttribute('data-testid', 'editor-' + r.id);
+
+    var row = document.createElement('div'); row.className = 'row';
+    var input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.setAttribute('data-testid', 'edit-input-' + r.id);
+    input.value = ed.value;
+    input.addEventListener('input', function () {
+      // user is editing; suppress overwrite. Clear inline error/success since input changed.
+      ed.value = input.value;
+      ed.userEdited = true;
+      ed.lastErr = '';
+      ed.lastOk = '';
+      renderInlineMsg(r.id);
+    });
+    input.addEventListener('focus', function () { ed.userEdited = true; });
+    row.appendChild(input);
+
+    // Quick presets (OQ1 non-committal; still allow "+15m", "+1h")
+    var quick = document.createElement('span'); quick.className = 'quick';
+    [['+5s',5*1000],['+15m',15*60*1000],['+1h',60*60*1000]].forEach(function (p) {
+      var qb = document.createElement('button');
+      qb.type = 'button'; qb.className = 'btn small';
+      qb.setAttribute('data-testid', 'quick-' + p[0].replace('+','plus') + '-' + r.id);
+      qb.textContent = p[0];
+      qb.addEventListener('click', function () {
+        var v = toLocalInput(nowMs() + p[1]);
+        ed.value = v; ed.userEdited = true; ed.lastErr=''; ed.lastOk='';
+        input.value = v;
+        renderInlineMsg(r.id);
+      });
+      quick.appendChild(qb);
+    });
+    row.appendChild(quick);
+
+    var confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button'; confirmBtn.className = 'btn small primary';
+    confirmBtn.setAttribute('data-testid', 'edit-confirm-' + r.id);
+    confirmBtn.textContent = '确认保存';
+    confirmBtn.addEventListener('click', function () { doSnooze(r); });
+    row.appendChild(confirmBtn);
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button'; closeBtn.className = 'btn small';
+    closeBtn.setAttribute('data-testid', 'edit-close-' + r.id);
+    closeBtn.textContent = '关闭';
+    closeBtn.addEventListener('click', function () {
+      delete editing[r.id];
+      renderRemindersFromCache();
+    });
+    row.appendChild(closeBtn);
+
+    wrap.appendChild(row);
+
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.setAttribute('data-testid', 'edit-hint-' + r.id);
+    hint.textContent = '提示：请选择晚于服务器当前时间的时间点。编辑期间后台刷新不会覆盖此输入。';
+    wrap.appendChild(hint);
+
+    var msgEl = document.createElement('div');
+    msgEl.setAttribute('data-testid', 'edit-msg-' + r.id);
+    msgEl.id = 'edit-msg-' + r.id;
+    wrap.appendChild(msgEl);
+
+    return wrap;
+  }
+
+  function renderInlineMsg(rid) {
+    var box = document.querySelector('[data-testid="edit-msg-' + rid + '"]');
+    if (!box) return;
+    var ed = editing[rid];
+    box.innerHTML = '';
+    if (!ed) return;
+    if (ed.lastErr) {
+      var e = document.createElement('div'); e.className = 'err';
+      e.setAttribute('data-testid', 'edit-err-' + rid);
+      e.textContent = ed.lastErr; box.appendChild(e);
+    }
+    if (ed.lastOk) {
+      var o = document.createElement('div'); o.className = 'ok';
+      o.setAttribute('data-testid', 'edit-ok-' + rid);
+      o.textContent = ed.lastOk; box.appendChild(o);
+    }
+  }
+
+  function openEdit(r) {
+    if (!editing[r.id]) {
+      // seed value from current snoozeUntil or default +15m (server time-based)
+      var seed = r.snoozeUntil && r.snoozeUntil > nowMs() ? r.snoozeUntil : (nowMs() + 15*60*1000);
+      editing[r.id] = { open: true, value: toLocalInput(seed), lastErr: '', lastOk: '', userEdited: false };
+    } else {
+      editing[r.id].open = true;
+    }
+    renderRemindersFromCache();
+  }
+
+  function currentActiveList(data) {
+    // Split into active / snoozed / done for actingId
+    var owner = ACTING_TO_USER[actingId] || actingId;
+    var rs = (data && data.reminders) || [];
+    return {
+      active: rs.filter(function (r) { return r.state === 'active'; }),
+      snoozed: rs.filter(function (r) { return r.state === 'snoozed'; }),
+      done: rs.filter(function (r) { return r.state === 'done'; }),
+      now: (data && data.now) || nowMs(),
+      owner: owner
+    };
+  }
+
+  function renderRemindersFromCache() {
+    if (!lastServerData) return;
+    var g = currentActiveList(lastServerData);
+    fillList('reminders', g.active);
+    fillList('reminders-snoozed', g.snoozed);
+    fillList('reminders-done', g.done);
+    document.getElementById('now-info').textContent = '服务器时间：' + fmtTs(g.now)
+      + '（本地：' + fmtTs(nowMs()) + '）';
+    document.querySelector('[data-testid="server-clock"]').textContent = '服务器时间：' + fmtTs(g.now);
+  }
+
+  function fillList(elId, list) {
+    var el = document.getElementById(elId);
+    el.innerHTML = '';
+    if (!list.length) {
+      var e = document.createElement('div'); e.className = 'empty';
+      e.setAttribute('data-testid', elId + '-empty');
+      e.textContent = elId === 'reminders' ? '暂无未处理提醒'
+                    : elId === 'reminders-snoozed' ? '当前无延后中提醒'
+                    : '暂无已处理记录';
+      el.appendChild(e);
+      return;
+    }
+    list.forEach(function (r) { el.appendChild(reminderCard(r)); });
+  }
+
+  // ---------- Actions ----------
+  function doSnooze(r) {
+    var ed = editing[r.id];
+    if (!ed) return;
+    var untilMs = fromLocalInput(ed.value);
+    if (!isFinite(untilMs)) {
+      ed.lastErr = '时间格式无效，请重新选择。';
+      ed.lastOk = '';
+      renderInlineMsg(r.id);
+      return;
+    }
+    // Server-authoritative check will happen too; client-side pre-check just for UX
+    if (untilMs <= (lastServerData && lastServerData.now || nowMs())) {
+      ed.lastErr = '再次提醒时间必须晚于当前时间（服务器时间 ' + fmtTs(lastServerData && lastServerData.now || nowMs()) + '）。';
+      ed.lastOk = '';
+      renderInlineMsg(r.id);
+      return; // 输入保留 —— AC18
+    }
+    apiCall('POST', '/api/reminders/' + encodeURIComponent(r.id) + '/snooze', { snoozeUntil: untilMs })
+      .then(function (res) {
+        if (res.ok) {
+          ed.lastErr = '';
+          ed.lastOk = '已保存：将于 ' + fmtTs(res.data.reminder.snoozeUntil) + ' 再提醒。';
+          ed.open = false; // 保存成功关闭编辑
+          delete editing[r.id];
+          toast('稍后再提醒已保存', 'ok');
+          refresh(true);
+        } else {
+          // R15/AC19: failure keeps state and preserves input
+          var errMsg = (res.error) || (res.data && res.data.error) || ('保存失败（HTTP ' + res.status + '）');
+          ed.lastErr = '保存失败：' + errMsg + '。输入已保留，可修改后再试。';
+          ed.lastOk = '';
+          renderInlineMsg(r.id);
+          toast(ed.lastErr, 'err');
+        }
+      });
+  }
+  function doCancel(r) {
+    apiCall('POST', '/api/reminders/' + encodeURIComponent(r.id) + '/cancel', {})
+      .then(function (res) {
+        if (res.ok) { toast('已取消延后', 'ok'); refresh(true); }
+        else toast('取消失败：' + (res.error || res.status), 'err');
+      });
+  }
+  function doDone(r) {
+    apiCall('POST', '/api/reminders/' + encodeURIComponent(r.id) + '/done', {})
+      .then(function (res) {
+        if (res.ok) { toast('已标记为已处理', 'ok'); refresh(true); }
+        else toast('操作失败：' + (res.error || res.status), 'err');
+      });
+  }
+  function doView(r) {
+    apiCall('GET', '/api/reminders/' + encodeURIComponent(r.id) + '/message', null)
+      .then(function (res) {
+        if (res.ok) {
+          highlightedMsgId = res.data.message.id;
+          renderChat(highlightedMsgId);
+          document.getElementById('chat-hint').textContent =
+            '已定位到 ' + res.data.message.from + ' 于 ' + res.data.message.time
+            + ' 的消息（下方黄色高亮）。这不改变延后/处理状态。';
+          if (highlightTimer) clearTimeout(highlightTimer);
+          highlightTimer = setTimeout(function () {
+            highlightedMsgId = null;
+            renderChat(null);
+          }, 15000);
+        } else {
+          toast('查看失败：' + (res.error || res.status), 'err');
+        }
+      });
+  }
+
+  // ---------- Refresh loop (protects editing input) ----------
+  function refresh(force) {
+    if (inflight >= 2 && !force) return;
+    apiCall('GET', '/api/reminders', null).then(function (res) {
+      if (!res.ok) {
+        toast('刷新失败：' + (res.error || res.status), 'err');
+        return;
+      }
+      lastServerData = res.data;
+      // Update editing panels but do NOT overwrite user's in-flight input (R13/AC17)
+      // Keep existing editing[r.id].value; only remove editors whose reminder disappeared or became done.
+      Object.keys(editing).forEach(function (rid) {
+        var stillThere = (lastServerData.reminders || []).some(function (r) { return r.id === rid && !r.done; });
+        if (!stillThere) delete editing[rid];
+      });
+      renderRemindersFromCache();
+      document.getElementById('last-refresh').textContent = '上次刷新：' + fmtTs(nowMs());
+    });
+  }
+
+  // ---------- Wire up ----------
+  document.getElementById('refresh-btn').addEventListener('click', function () { refresh(true); });
+  renderUsers();
+  renderChat(null);
+  refresh(true);
+  // Poll every 3 seconds so AC17 (>=6s / 2 cycles) is observable
+  refreshTimer = setInterval(function () { refresh(false); }, 3000);
+})();
+</script>
+<footer style="padding:16px;text-align:center;font-size:12px;color:#64748b">作者：Octo 小码（runtimeId: implementation） · 独立测试角色：Octo 小检（runtimeId: verification） · PRD v5 / 候选 r1</footer></body>
+</html>
