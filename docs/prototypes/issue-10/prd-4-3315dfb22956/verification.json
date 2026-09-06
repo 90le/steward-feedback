@@ -1,0 +1,58 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: setup - start server\nok 1 - setup - start server\n  ---\n  duration_ms: 209.979725\n  type: 'test'\n  ...\n# Subtest: AC1/R1/R2 - Alice 可对本人提醒设置未来时间 snooze，随后不出现在活跃视图（listing 显示 snoozed）\nok 2 - AC1/R1/R2 - Alice 可对本人提醒设置未来时间 snooze，随后不出现在活跃视图（listing 显示 snoozed）\n  ---\n  duration_ms: 22.989787\n  type: 'test'\n  ...\n# Subtest: AC7/R8 - snoozeUntil 不晚于当前时间时应拒绝，且提醒保持原状态\nok 3 - AC7/R8 - snoozeUntil 不晚于当前时间时应拒绝，且提醒保持原状态\n  ---\n  duration_ms: 11.220489\n  type: 'test'\n  ...\n# Subtest: AC9/R6/R11 - 服务端身份边界：Bob 不能操作 Alice 的提醒；未识别用户 401\nok 4 - AC9/R6/R11 - 服务端身份边界：Bob 不能操作 Alice 的提醒；未识别用户 401\n  ---\n  duration_ms: 48.116485\n  type: 'test'\n  ...\n# Subtest: AC3/R3 - 到点重现：snoozeUntil 已过时 list 返回 viewStatus=active 且 reemerged=true\nok 5 - AC3/R3 - 到点重现：snoozeUntil 已过时 list 返回 viewStatus=active 且 reemerged=true\n  ---\n  duration_ms: 259.805612\n  type: 'test'\n  ...\n# Subtest: AC10/R9 - 明确处理即取消延后：markDone 后 status=done，无重现\nok 6 - AC10/R9 - 明确处理即取消延后：markDone 后 status=done，无重现\n  ---\n  duration_ms: 312.028286\n  type: 'test'\n  ...\n# Subtest: AC11/R10 - 仅查看原消息不改变提醒状态；返回真实原消息内容与会话上下文\nok 7 - AC11/R10 - 仅查看原消息不改变提醒状态；返回真实原消息内容与会话上下文\n  ---\n  duration_ms: 10.8557\n  type: 'test'\n  ...\n# Subtest: AC15/AC16/R12 - 多端一致：一处 markDone 后另一次 list（模拟另一端刷新）看到 done\nok 8 - AC15/AC16/R12 - 多端一致：一处 markDone 后另一次 list（模拟另一端刷新）看到 done\n  ---\n  duration_ms: 12.664092\n  type: 'test'\n  ...\n# Subtest: AC5 - 取消延后：cancelSnooze 后 status 恢复 active，snoozeUntil 清空\nok 9 - AC5 - 取消延后：cancelSnooze 后 status 恢复 active，snoozeUntil 清空\n  ---\n  duration_ms: 8.943644\n  type: 'test'\n  ...\n# Subtest: teardown - stop server\nok 10 - teardown - stop server\n  ---\n  duration_ms: 6.261137\n  type: 'test'\n  ...\n1..10\n# tests 10\n# suites 0\n# pass 10\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 991.975998\n",
+  "stderr": "",
+  "tests": 10,
+  "passed": true,
+  "testDigest": "522e8ee4980f3d9a3fda1882df34be037a8aed5bd7cf7cadfd87191c591a5ff3",
+  "candidateDigest": "775d4deacb6af0f47045586397c98ae17dfef91e56f0e32a5db1646f7ac45532",
+  "checkedAt": "2026-09-06T14:08:48.743Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "候选后端在独立子进程中通过 10 项真实 HTTP 断言：AC1/R1/R2 设置 snooze 后 status=snoozed 且 viewStatus 不活跃；AC7/R8 过去时间返回 time_invalid 且 r_a1 保持 active/snoozeUntil=null；AC9/R6/R11 Bob 对 Alice 提醒 403 forbidden、未识别用户 401、Bob list 仅含 r_b1/r_b2；AC3/R3 snoozeUntil 到期后 list 返回 viewStatus=active 且 reemerged=true；AC10/R9 markDone 后 status=done、snoozeUntil=null，过原时间不重现；AC11/R10 viewMessage 返回真实原消息文本(含 @Alice)与 conversation 上下文，提醒状态与 snoozeUntil 保持；AC15/AC16/R12 一次 markDone 后新的 list 请求（模拟另一端）读到 done，Bob 视图不受影响；AC5 cancelSnooze 恢复 active，对 active 再次取消返回 invalid_state。",
+      "浏览器 UI 未执行：本次仅在 HTTP/JSON 层验证服务端契约与业务规则，未在浏览器中验证 AC3/AC14 的原消息真实展示与高亮定位、AC8 网络异常前端 toast 与回退、以及 AC13 的时间校验界面呈现，需人工或浏览器测试补充。"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/cb1045eedcd31752214b13a22e7c6ec08c48075005237ea0b8deb6a0239cf759/r1 node --test --test-reporter=tap /artifacts/jobs/cb1045eedcd31752214b13a22e7c6ec08c48075005237ea0b8deb6a0239cf759/r1/acceptance.test.mjs → tests 10 pass 10 fail 0 duration_ms 985",
+    "checks": [
+      {
+        "criterion": "AC1/R1/R2 设置 snooze 主流程",
+        "passed": true
+      },
+      {
+        "criterion": "AC7/R8 时间校验失败保持原状态",
+        "passed": true
+      },
+      {
+        "criterion": "AC9/R6/R11 服务端身份边界(403/401)与仅影响本人",
+        "passed": true
+      },
+      {
+        "criterion": "AC3/R3 到点重现视图",
+        "passed": true
+      },
+      {
+        "criterion": "AC10/R9 明确处理取消延后",
+        "passed": true
+      },
+      {
+        "criterion": "AC11/R10 仅查看不改状态且返回真实原消息",
+        "passed": true
+      },
+      {
+        "criterion": "AC15/AC16/R12 多端一致：另一端读到 done",
+        "passed": true
+      },
+      {
+        "criterion": "AC5 取消延后与非法状态",
+        "passed": true
+      },
+      {
+        "criterion": "AC3/AC8/AC13/AC14 浏览器 UI 层未执行",
+        "passed": false
+      }
+    ]
+  }
+}
