@@ -1,0 +1,53 @@
+{
+  "issueNumber": 10,
+  "prdVersion": 4,
+  "candidateDigest": "775d4deacb6af0f47045586397c98ae17dfef91e56f0e32a5db1646f7ac45532",
+  "author": {
+    "runtimeId": "implementation",
+    "runId": "steward-5211e63ab04fbd2f6b74f67dff76846bb165f0f4fb3cc95ac88045a1a7e9d371"
+  },
+  "reviewer": {
+    "runtimeId": "reviewer",
+    "runId": "steward-1565b71e03b90c5d7522fd92f7cba233b3a57cb2598c44cf0cfda1b7a11842d3"
+  },
+  "verification": {
+    "runtimeId": "verification",
+    "runId": "steward-48a68d0c2d48b88525fadcb2864f95fdf422e52f2b38b3365e5243efe13968ea",
+    "testDigest": "522e8ee4980f3d9a3fda1882df34be037a8aed5bd7cf7cadfd87191c591a5ff3",
+    "tests": 10
+  },
+  "schemaVersion": 1,
+  "packagingVersion": "contained-v1",
+  "sourceDigest": "3315dfb22956341f7f5de040d99b6d2a5a680f9631f92d008e94ab0372aaa945",
+  "sourceSha256": "d58d6d670a3270071d1bd8e1af86158b41f6dfed4662c4a7bb1ed1eaae08db9d",
+  "previewSha256": "bc95e527be29c809c24729ae8227b1a635df4316a2a086cd7f16874da4bf860e",
+  "backendPreviewSha256": "ec85218d461774da5244b3847e27cdcca33e7a05f09932114830f435d57505be",
+  "backend": true,
+  "sourcePath": "prototype-source/issue-10/prd-4-3315dfb22956",
+  "sourceUrl": "https://github.com/90le/steward-feedback/tree/main/prototype-source/issue-10/prd-4-3315dfb22956",
+  "previewPath": "docs/previews/contained-v1/issue-10/prd-4-bc95e527be29",
+  "previewUrl": "https://90le.github.io/steward-feedback/previews/contained-v1/issue-10/prd-4-bc95e527be29/index.html",
+  "previewServerSha256": "d3885d95a8f2d78f8fe8609308e635ebe8ba9a50f8188650a3b0ccd0dc2a560b",
+  "sourceFiles": {
+    "index.html": {
+      "sha256": "d58d6d670a3270071d1bd8e1af86158b41f6dfed4662c4a7bb1ed1eaae08db9d",
+      "bytes": 24435
+    },
+    "server.mjs": {
+      "sha256": "0b3fd178ad529bf770571f960f9b0eb57a5863d22a0e9c0e523a3e7edf61ef01",
+      "bytes": 7859
+    },
+    "README.md": {
+      "sha256": "02b3cf1ab6ae3c24d5d7ef9301c921fb39fbdbd25581b43adafc7a61181cd730",
+      "bytes": 7756
+    },
+    "acceptance.test.mjs": {
+      "sha256": "23c3c718e9133ea81a0b446e569ff8d7191a398cf741be94f3541a76af677b92",
+      "bytes": 9638
+    },
+    "verification.json": {
+      "sha256": "23e67fb00ac8fdd7f8b5654ebf3200550be131f336966cf2f26eb568e41f9928",
+      "bytes": 5296
+    }
+  }
+}
