@@ -2,21 +2,7 @@
 
 Steward 使用一个 OpenClaw Gateway、一个业务插件及其注册 Worker、一份业务 SQLite 数据库。五个角色有独立运行身份与工作区；Octo 是聊天入口，GitHub 保存公开业务记录和演示产物。
 
-```mermaid
-flowchart TB
-    O[Octo 群与私聊] --> B[传输桥：身份、原生提及、原消息]
-    subgraph G[一个 OpenClaw Gateway]
-        B --> W[Steward 插件与 Worker]
-        W <--> DB[(SQLite：消息、任务、版本、意图与回执)]
-        W <--> A[五角色 Agent：小丘、小助、小衡、小码、小检]
-        A --> K[固定源码快照与已发布知识]
-        A --> X[小码与小检原生 Docker：独立产物、只读候选]
-        W --> E[固定目标适配器与出口检查]
-    end
-    U[只读 octo-server 上游] --> K
-    E --> H[GitHub：Issue、评论、演示目录]
-    E --> O
-```
+![系统架构](diagrams/architecture.svg)
 
 箭头是数据与调用关系，不表示 Agent 可以绕过 Worker 自行操作 GitHub 或向任意收件人发送消息。开发／测试也可使用按角色开放的只读业务工具，图中仅突出其命令执行环境。
 
@@ -28,6 +14,8 @@ flowchart TB
 | 比较 Issue 正文、评论与语义重复 | 查询完整性、查重依据有效性与固定写入目标 |
 | 理解需求、撰写和修订、独立内容判断 | 身份、原消息、运行、角色、阶段与版本绑定 |
 | 沙箱内必要计算、开发和测试 | 冻结候选、实际复跑测试、限流、去重和外部回执 |
+
+真实来源会在提示构建之前从本次已持租约的持久化入站作用域绑定，而不是依赖稍晚发生的 onAgentRunStart 才提供身份。没有当前作用域、来源不匹配或租约已结束时拒绝提前绑定；后台任务仍按独立的控制器任务约束处理。
 
 现有六个业务工具为 `steward_source_search`、`steward_source_read`、`steward_source_answer`、`steward_issue_lookup`、`steward_feedback_submit`、`steward_work_status`，按角色开放。入口少不意味着只能调查一次：源码和 Issue 工具支持按需读取与继续调查。
 
@@ -52,34 +40,23 @@ GROUP.md 解释群内参与语义；确定的身份与原生提及限制在代�
 | 公开源码、共享知识 | 只读；正式调查绑定本轮提交并返回证据 |
 | 角色、灵魂、技能、权限 | 部署源维护，Agent 不可改写 |
 | 小码、小检命令工具 | OpenClaw 原生 Docker；exec 强制 sandbox、无提权、网络关闭 |
-| 计算与业务产物 | 两角色独立 `/artifacts` 可写；设置及工作区只读；冻结 `/candidate` 只读 |
+| 计算与业务产物 | 每个角色自己的 `/artifacts` 可写，同角色会话共用此根；设置及工作区只读；冻结 `/candidate` 只读 |
 | 沙箱 `/source` | 独立只读导航快照，不承诺自动追随上游；当前结论仍需版本绑定工具取证 |
-| 宿主配置、凭证、其他会话、Docker socket | 不挂入 Agent 沙箱，不随命令权限开放 |
+| 宿主配置、凭证、原生会话历史目录、Docker socket | 不挂入 Agent 沙箱，不随命令权限开放 |
 | GitHub / Octo 外部效果 | 插件按固定仓库、允许文件路径和真实来源执行，保留意图与回执 |
 
 小丘、小助、小衡沿用受限读取与专用业务工具，未统一切换沙箱。沙箱不能限制宿主 Gateway 内插件，插件目标和凭证控制独立保留。该组合用于真实开发与测试，不等于全面安全审计或完整工具 A/B 已通过。
 
 ## 从输入到实际回执
 
-```mermaid
-sequenceDiagram
-    participant O as Octo
-    participant B as 传输桥
-    participant W as Worker / SQLite
-    participant A as 指定 Agent
-    participant E as 外部适配器
-    O->>B: 原消息与可信发送者
-    B->>W: 身份判断、持久化、去重
-    W-->>B: 已保存
-    B-->>O: ACK
-    W->>A: 固定任务、来源与版本
-    A->>W: 工具请求或产物
-    W->>W: 核对角色、阶段、依据
-    W->>E: 保存意图后执行固定目标操作
-    E-->>W: 实际回执或不确定结果
-    W->>W: 完成、等待或对账
-```
+![原始消息到外部回执](diagrams/message-origin.svg)
 
-`before_prompt_build` 提供规则和上下文；`before_tool_call` 及执行层检查权限与调用来源；业务状态机核对阶段与产物；出口和回执处理完成外部交付。提示引导、权限执行和语义质量验收分别承担责任。
+`before_prompt_build` 提供规则和上下文；`before_tool_call` 仅检查已纳管的 Steward 业务工具，执行层再核对权限与调用来源；原生 read / exec / process 依靠 OpenClaw 策略及实际沙箱；业务状态机核对阶段与产物；出口和回执处理完成外部交付。提示引导、权限执行和语义质量验收分别承担责任。
+
+## 三个执行位置分别保护
+
+![容器、宿主程序与浏览器的边界](diagrams/execution-boundaries.svg)
+
+Agent 的 Docker 不会自动约束 Gateway 插件，也不会限制用户浏览器中运行的生成 JavaScript。可信程序分别检查文件收集、公开内容和预览包装；回执核验来自按原目标同步读回的平台消息，不等于收件设备已展示或用户已读。具体方法与有限验证见[安全说明](security.md)。
 
 [返回首页](../README.md) · [流程与恢复](workflow.md)

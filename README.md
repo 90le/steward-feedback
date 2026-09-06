@@ -4,28 +4,13 @@
 
 Steward 在 OpenClaw 上运行五个 Agent，通过 Octo 接收问题和反馈，用本仓库保存 Issue、PRD、独立评审、演示代码与测试记录。Agent 负责调查与判断，后台 Worker 根据真实状态自动交接工作。
 
-[项目介绍](docs/overview.md) · [打开真实演示](https://90le.github.io/steward-feedback/prototypes/issue-8/prd-3-03a0a091af3b/index.html) · [查看需求池](https://github.com/90le/steward-feedback/issues) · [交付与验证](docs/delivery.md)
+[完整图文介绍](https://90le.github.io/steward-feedback/) · [三分钟读懂](docs/overview.md) · [查看需求池](https://github.com/90le/steward-feedback/issues) · [交付与验证](docs/delivery.md)
 
 ## 一条自动接续的流程
 
-```mermaid
-flowchart TB
-    U[Octo 产品问题或反馈] --> S[小丘：调查、澄清、查重]
-    S -->|问答| A[源码依据或明确未知]
-    S -->|反馈| I[GitHub Issue]
-    I -->|Feature| P[小助：PRD]
-    P --> R[小衡：独立评审]
-    R -->|修订| P
-    R -->|PRD 就绪| D[小码：演示开发]
-    D --> T[小检：实际测试]
-    T --> F[小衡：交付复核]
-    F --> O[预览、代码、报告]
-    O --> N[小丘回原会话]
-    I -->|定时发现变化| N
-    A --> N
-```
+![五角色需求处理与交付流程](docs/diagrams/workflow.svg)
 
-PRD 通过后，已启用的自动开发流程接续工作，**不需要在群里逐个 @ 指挥**。Bug 默认归档并跟踪；Feature 才进入 PRD 流程。评审或测试不通过时修订，超出自动修订范围则提出具体待决问题。完整失败分支见[协作流程](docs/workflow.md)。
+PRD 通过后，已启用的自动开发流程接续工作，**不需要在群里逐个 @ 指挥**。Bug 默认登记 Issue 并跟踪；Feature 才进入 PRD 流程。评审或测试不通过时修订，超出自动修订范围则提出具体待决问题。完整失败分支见[协作流程](docs/workflow.md)。
 
 ## 五个角色，各自承担责任
 
@@ -50,27 +35,35 @@ Octo 小测是配置放行的外部联调提问 Bot，不属于这五个团队 A
 
 小丘无需被 @，但只参与相关产品问题、反馈与追问；闲聊、明确写给其他人的消息保持静默。普通人只通过小丘问答、反馈和查状态；其反馈可以进入固定自动流程，但不获得直接调度其他角色或批准产物的权限。未放行 Bot 全部静默，自家 Bot 不互相接话。详见[参与权限](docs/architecture.md#参与权限)。
 
-## 已有真实样例
+## 两条全新真实案例
 
-**[#8：投票发起人修改未截止投票的截止时间](https://github.com/90le/steward-feedback/issues/8)** 已经过 PRD 打回、修订和复审，再自动进入小码开发、小检实际测试、小衡复核与原会话回报。
+[打开 #9 受限预览](https://90le.github.io/steward-feedback/previews/contained-v1/issue-9/prd-2-ce43cdac76d3/index.html) · [打开 #10 v6 受限预览](https://90le.github.io/steward-feedback/previews/contained-v1/issue-10/prd-6-2540e38789ef/index.html)
 
-- [PRD v3](https://github.com/90le/steward-feedback/issues/8#issuecomment-5555649074) · [独立评审](https://github.com/90le/steward-feedback/issues/8#issuecomment-5555650888)
-- [五角色交付记录](https://github.com/90le/steward-feedback/issues/8#issuecomment-5558075155) · [前后端代码、测试和报告](docs/prototypes/issue-8/prd-3-03a0a091af3b/README.md)
-- 独立 HTTP 测试 4 项通过；此样例额外完成前后端与静态预览两种模式、各 12 项浏览器操作检查。
+这两条需求由配置放行的小测在联调会话提出，经真实 Octo、OpenClaw、GitHub 链路执行。小测是测试提问者，五个 Agent 承担业务角色；建设任务追加的浏览器验收单独署名。
 
-公开 Pages 是静态模拟预览，下载代码后可运行演示后端。**PRD 就绪、演示完成、上游功能上线是不同状态。** 本仓库是需求池与演示产物库，不托管 Steward 运行源码或凭证，也不写入只读上游 [octo-server](https://github.com/Mininglamp-OSS/octo-server)。
+| 案例 | 最终演示版本 | 值得看的修订 | 可核验记录 |
+| --- | --- | --- | --- |
+| 置顶消息自动失效 | #9 / PRD v2 | 小衡发现首稿未经确认排除批量管理，要求撤回该假设，作为开放问题保留 | [第一次独立打回](https://github.com/90le/steward-feedback/issues/9#issuecomment-5559283769) · [交付](https://github.com/90le/steward-feedback/issues/9#issuecomment-5559448144) |
+| 提醒稍后处理 | #10 / PRD v6 | 浏览器检查发现默认时间请求失败、原消息入口只显示提示、跨页状态不同步；正常 Issue 反馈驱动后续修订至 v6；公开旧版代码作为新任务的完整参考 | [浏览器反馈](https://github.com/90le/steward-feedback/issues/10#issuecomment-5559561466) · [最终交付](https://github.com/90le/steward-feedback/issues/10#issuecomment-5562039070) |
+
+小检的独立 HTTP 测试及隔离复跑当前版本分别为 **4 / 7 项**。建设任务另外核对两条案例的后端模式和静态预览，详见[分层验证](docs/delivery.md)。这些是受控需求的真实系统样本，不是生产用户统计。
+
+**演示完成、PRD 就绪、上游功能上线分别判断。** 两条 Issue 保持打开。Pages 提供静态模拟预览；演示后端需要在隔离环境独立启动，通过可信预览服务访问。本仓库保存需求与演示产物，不托管 Steward 运行源码或凭证，也不写入只读上游 [octo-server](https://github.com/Mininglamp-OSS/octo-server)。
+
+此前 [#8 五角色交付](https://github.com/90le/steward-feedback/issues/8#issuecomment-5558075155) 保留为历史案例，原作者、测试及版本记录不被新包装覆盖。
 
 ## 项目文档
 
 | 想了解什么 | 文档 |
 | --- | --- |
-| 三分钟讲清项目、设计取舍与亮点 | [项目介绍](docs/overview.md) |
+| 从零理解并完整讲解项目 | [完整 HTML](https://90le.github.io/steward-feedback/) · [项目介绍](docs/overview.md) |
 | Gateway、Agent、Worker、数据与权限关系 | [架构与资源边界](docs/architecture.md) |
 | 问答、收单、PRD、开发、定时追踪、人工求助 | [协作流程](docs/workflow.md) |
+| 安全修复、三种执行边界与验证限制 | [安全与验证范围](docs/security.md) |
 | 九域知识、源码版本、失效重审与引用 | [知识与证据](docs/knowledge.md) |
 | 实际完成了什么，哪些尚未验证 | [交付与验证记录](docs/delivery.md) |
 | 如何反馈、署名与提供安全资料 | [反馈指南](CONTRIBUTING.md) |
 | 标签、关闭原因和产物阶段 | [标签与状态](docs/labels.md) |
 | 起草、评审与交付记录 | [PRD 模板](docs/templates/prd.md) · [评审模板](docs/templates/review.md) · [交付模板](docs/templates/delivery.md) |
 
-更新依据：2026-09-06 的 mvp-038 运行核验与公开产物。群内只发送结果、必要澄清或需处理的阻碍；无变化扫描不调用模型、不发消息。公开提交前请移除凭证、私聊原文、群号及个人敏感信息；安全问题使用[上游安全政策](https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md)规定的私密渠道。
+更新依据：2026-09-07 mvp-052 运行读回与 #9 v2 / #10 v6 的实际产物。安全初段、合成验证、普通控制与私聊前置阻塞分开记载，见交付记录。群内只发送结果、必要澄清或需处理的阻碍；无变化扫描不调用模型、不发消息。公开提交前请移除凭证、私聊原文、群号及个人敏感信息；安全问题使用[上游安全政策](https://github.com/Mininglamp-OSS/octo-server/blob/main/SECURITY.md)规定的私密渠道。
