@@ -1,0 +1,53 @@
+{
+  "issueNumber": 10,
+  "prdVersion": 2,
+  "candidateDigest": "69b5622f2da83b91f9d695d8ed0c70a9b5d0989c013d2d9d8151c8708bf05248",
+  "author": {
+    "runtimeId": "implementation",
+    "runId": "steward-d0cee2013342b1367e58dfd8f0ff2d7039d4a22843de145c3e74bcb18f20b7eb"
+  },
+  "reviewer": {
+    "runtimeId": "reviewer",
+    "runId": "steward-66a019fcd662c5cb7e462245ae4ebd297ec53ab313ae5ca8bf67e04fb0e345e3"
+  },
+  "verification": {
+    "runtimeId": "verification",
+    "runId": "steward-64f2c2dcd24ce11a0dd125d7bbe27d7750129669211897ee9a8062478ade4e45",
+    "testDigest": "28da57b3886438b240b08253f503e0ea8729e838be0caa5d2dfdc12dac6647a5",
+    "tests": 7
+  },
+  "schemaVersion": 1,
+  "packagingVersion": "contained-v1",
+  "sourceDigest": "4ad191198368a40b63b3b5928a4b74cc048a5949b89c7e4d03cfeaaad0c557c2",
+  "sourceSha256": "490510df78fc7725c13cfb7bfced14f12689aa6ac1974c4939747d50ba3843cb",
+  "previewSha256": "0a205c5711324c5a63b57264686dd483fdc31f980b5441274387ba66d9eba535",
+  "backendPreviewSha256": "f005a6f9f5c2c98d59a5f238271ba6e47fec2bfcb6fa0966c4eadaa648242822",
+  "backend": true,
+  "sourcePath": "prototype-source/issue-10/prd-2-4ad191198368",
+  "sourceUrl": "https://github.com/90le/steward-feedback/tree/main/prototype-source/issue-10/prd-2-4ad191198368",
+  "previewPath": "docs/previews/contained-v1/issue-10/prd-2-0a205c571132",
+  "previewUrl": "https://90le.github.io/steward-feedback/previews/contained-v1/issue-10/prd-2-0a205c571132/index.html",
+  "previewServerSha256": "d3885d95a8f2d78f8fe8609308e635ebe8ba9a50f8188650a3b0ccd0dc2a560b",
+  "sourceFiles": {
+    "index.html": {
+      "sha256": "490510df78fc7725c13cfb7bfced14f12689aa6ac1974c4939747d50ba3843cb",
+      "bytes": 26121
+    },
+    "server.mjs": {
+      "sha256": "9cad31ac5adda3067f99b38361e82f2b0279da21ae897db5ec628972637341f0",
+      "bytes": 8743
+    },
+    "README.md": {
+      "sha256": "652b3d153f1383ffa5affd792ffe270e156f8fe3bdef317d051e200a251ff15e",
+      "bytes": 4614
+    },
+    "acceptance.test.mjs": {
+      "sha256": "88a45eea661d1b2561a934698374a4f7b1f1358c5ab3a19846b43aeae15dcc41",
+      "bytes": 12146
+    },
+    "verification.json": {
+      "sha256": "a18f7058ea3e94ff6b6acb6590fd8cf6d6c43651d8030ce862a4c2ff604170d3",
+      "bytes": 4806
+    }
+  }
+}
