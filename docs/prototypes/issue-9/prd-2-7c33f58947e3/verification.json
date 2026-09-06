@@ -1,0 +1,57 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: 主流程：置顶带到期时间，到期后静默取消置顶且消息保留\nok 1 - 主流程：置顶带到期时间，到期后静默取消置顶且消息保留\n  ---\n  duration_ms: 2701.765546\n  type: 'test'\n  ...\n# Subtest: 服务端身份/权限边界：无权限成员与未知身份都无法修改到期\nok 2 - 服务端身份/权限边界：无权限成员与未知身份都无法修改到期\n  ---\n  duration_ms: 17.735721\n  type: 'test'\n  ...\n# Subtest: 失败保持状态：过去时间被拒绝且不改动原有到期\nok 3 - 失败保持状态：过去时间被拒绝且不改动原有到期\n  ---\n  duration_ms: 19.695025\n  type: 'test'\n  ...\n# Subtest: 业务边界：不能给未置顶消息设置到期\nok 4 - 业务边界：不能给未置顶消息设置到期\n  ---\n  duration_ms: 7.496512\n  type: 'test'\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 4\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 2829.819735\n",
+  "stderr": "",
+  "tests": 4,
+  "passed": true,
+  "testDigest": "c3214f50104b95d8d41a25997f0f125141707262f2fa934891f57417eb999277",
+  "candidateDigest": "ea7f2897a2a8ce7fbcf2a7f67a8f0938ffdc220a849c47733c044bada489093f",
+  "checkedAt": "2026-09-06T12:47:09.161Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "主流程验证：admin 通过 POST /api/messages 创建 pin=true 且 expireAt=now+1500ms 的消息返回 200；2.5s 后再拉列表，该消息仍在（未删除），pinned=false、expireAt=null、text 未变，证明到期静默解除且原消息保留。",
+      "服务端身份边界：无 X-User-Id 请求 PUT /api/messages/2/expire 返回 401 unauthenticated；member（canPin=false）请求同一接口返回 403 forbidden；member 发送 pin=true 消息返回 403；越权尝试后消息 #2 仍为 pinned=true、expireAt=null，状态未受影响。",
+      "失败保持状态：为 admin 创建的未来到期置顶尝试改成过去时间返回 400 invalid_expire、改成字符串 'not-a-number' 同样返回 400，两次失败后 expireAt 仍为原始 future1；随后合法改为 future2 返回 200，最后 expireAt=null 返回 200 且 pinned 仍为 true，证明取消到期恢复长期置顶。",
+      "业务边界：未置顶消息 #1 上 PUT expire 返回 409 not_pinned，且消息 #1 状态未被改动。",
+      "浏览器 UI 未执行本次仅覆盖 HTTP 后端行为；前端 index.html 未做 DOM/交互验收。"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/9c3516cd5c7b2cb43fa1e69d7a90f3fe819d97d0b90038aa2a91cf478f422cca/r1 node --test --test-reporter=tap /artifacts/jobs/9c3516cd5c7b2cb43fa1e69d7a90f3fe819d97d0b90038aa2a91cf478f422cca/r1/acceptance.test.mjs → tests 4 / pass 4 / fail 0 / duration_ms 2862.93",
+    "checks": [
+      {
+        "criterion": "用户结果1 可选到期时间：不填时长期置顶，填未来时间被接受",
+        "passed": true
+      },
+      {
+        "criterion": "用户结果3 到期时间必须晚于当前，否则不生效且可感知（返回 400 invalid_expire）",
+        "passed": true
+      },
+      {
+        "criterion": "用户结果4 到期前可调整或取消到期（PUT expire=null 保留置顶）",
+        "passed": true
+      },
+      {
+        "criterion": "用户结果5 到期后静默取消置顶，原消息保留内容一致",
+        "passed": true
+      },
+      {
+        "criterion": "用户结果6 保存失败时保留原设置（非法/过去时间失败后 expireAt 不变）",
+        "passed": true
+      },
+      {
+        "criterion": "非目标1 权限结构不变：member 无置顶权限被 403 拒绝",
+        "passed": true
+      },
+      {
+        "criterion": "业务边界：对未置顶消息设到期返回 409 not_pinned 且状态不变",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器端 UI 验收",
+        "passed": false
+      }
+    ]
+  }
+}
