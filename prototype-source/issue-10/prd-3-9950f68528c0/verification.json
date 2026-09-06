@@ -1,0 +1,71 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: README/server exist and expose expected endpoints\nok 1 - README/server exist and expose expected endpoints\n  ---\n  duration_ms: 205.007354\n  type: 'test'\n  ...\n# Subtest: AC1 + AC3 setSnooze hides from active, expiring returns as active/unresolved on next list\nok 2 - AC1 + AC3 setSnooze hides from active, expiring returns as active/unresolved on next list\n  ---\n  duration_ms: 319.871869\n  type: 'test'\n  ...\n# Subtest: AC7/AC13 setSnooze with until <= serverNow rejected with NOT_FUTURE and serverNow, state preserved\nok 3 - AC7/AC13 setSnooze with until <= serverNow rejected with NOT_FUTURE and serverNow, state preserved\n  ---\n  duration_ms: 17.010065\n  type: 'test'\n  ...\n# Subtest: AC9 ownership: cannot snooze another user's reminder, forbidden and no state change\nok 4 - AC9 ownership: cannot snooze another user's reminder, forbidden and no state change\n  ---\n  duration_ms: 9.65624\n  type: 'test'\n  ...\n# Subtest: Unauthenticated (no x-uid) rejected with 401\nok 5 - Unauthenticated (no x-uid) rejected with 401\n  ---\n  duration_ms: 2.841799\n  type: 'test'\n  ...\n# Subtest: AC10 resolve during snooze cancels re-emergence; AC11 view does not change state\nok 6 - AC10 resolve during snooze cancels re-emergence; AC11 view does not change state\n  ---\n  duration_ms: 415.306055\n  type: 'test'\n  ...\n# Subtest: AC4/AC5 editSnooze requires snoozed state; cancelSnooze restores active\nok 7 - AC4/AC5 editSnooze requires snoozed state; cancelSnooze restores active\n  ---\n  duration_ms: 15.300997\n  type: 'test'\n  ...\n# Subtest: AC8 injected failure keeps state unchanged; non-existent id gives 404\nok 8 - AC8 injected failure keeps state unchanged; non-existent id gives 404\n  ---\n  duration_ms: 10.824681\n  type: 'test'\n  ...\n# Subtest: GET / serves data-api HTML shell (front-end backend-bound flag)\nok 9 - GET / serves data-api HTML shell (front-end backend-bound flag)\n  ---\n  duration_ms: 5.893997\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1087.939996\n",
+  "stderr": "",
+  "tests": 9,
+  "passed": true,
+  "testDigest": "80124a3df04a7acbdcfa721f5a5802c74aeca5223be9797c9c13da42b2c752fe",
+  "candidateDigest": "111cdc95bb97202066261e67729ed2c8c0c1694c6bbf78113a0c9e7935373943",
+  "checkedAt": "2026-09-06T13:54:09.172Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "HTTP 层覆盖 AC1/AC3(数据面到点重现且携带原消息 msgId 与 message 字段可供前端定位)、AC4/AC5(editSnooze 要求 snoozed 状态、cancelSnooze 恢复 active)、AC7/AC13(NOT_FUTURE 严格拒绝且返回 serverNow 供对齐,失败不改状态)、AC8(注入失败与 NOT_FOUND 保持状态)、AC9(跨用户 403 且不泄漏他人提醒)、AC10(延后期间 resolve 后到点不再重现)、AC11(view 端点不改 status/snoozeUntil)、未认证 401 与 data-api 前端外壳可用",
+      "服务端所有 9 个测试通过,断言覆盖 status/code/snoozeUntil/msgId/serverNow 等业务字段而非仅 HTTP 200",
+      "浏览器 UI(滚动定位/高亮闪烁/toast/模态框对齐 serverNow)本次未执行,属原型前端交互层,HTTP 测试不替代;需要在浏览器自动化或人工验收中独立核验 AC3/AC13/AC14 的界面呈现"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/5d3c2240d80043a2290a4750d0941749bd30e64f6b90073c4110de8f56ffd912/r1 node --test --test-reporter=tap /artifacts/jobs/5d3c2240d80043a2290a4750d0941749bd30e64f6b90073c4110de8f56ffd912/r1/acceptance.test.mjs -> tests 9 pass 9 fail 0 duration_ms 1085",
+    "checks": [
+      {
+        "criterion": "AC1 设置延后后本人活跃列表隐藏,列表可查到 snoozed 状态",
+        "passed": true
+      },
+      {
+        "criterion": "AC3 到 snoozeUntil 后再次 GET /api/list 该项自动 tick 回 active 且未处理,msgId 与 message 保留可供定位原消息",
+        "passed": true
+      },
+      {
+        "criterion": "AC4 editSnooze 在非 snoozed 时 409 NOT_SNOOZED,在 snoozed 时可改到另一未来时间",
+        "passed": true
+      },
+      {
+        "criterion": "AC5 cancelSnooze 立即恢复 active、snoozeUntil 清空",
+        "passed": true
+      },
+      {
+        "criterion": "AC7/AC13 until<=serverNow 一律 400 NOT_FUTURE 并返回 serverNow;状态不改动",
+        "passed": true
+      },
+      {
+        "criterion": "AC8 /api/fail 与不存在 id 不改动任何提醒的 status/snoozeUntil",
+        "passed": true
+      },
+      {
+        "criterion": "AC9 服务端强制身份校验:非本人提醒 403 FORBIDDEN,不因前端而放行,alice 列表不泄漏 bob 提醒",
+        "passed": true
+      },
+      {
+        "criterion": "AC10 延后期间 resolve 后到达原 snoozeUntil,tick 不会把 resolved 提醒变回 active",
+        "passed": true
+      },
+      {
+        "criterion": "AC11 /api/view 不改 status/snoozeUntil",
+        "passed": true
+      },
+      {
+        "criterion": "未认证请求 401 UNAUTHENTICATED",
+        "passed": true
+      },
+      {
+        "criterion": "GET / 注入 data-api=\"1\" 供前端识别同源后端",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器层 AC3/AC14 滚动定位/高亮/模态框 serverNow 对齐 UI 呈现",
+        "passed": false
+      }
+    ]
+  }
+}
