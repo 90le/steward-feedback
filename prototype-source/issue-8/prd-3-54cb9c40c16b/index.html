@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交互原型 · 群投票修改截止时间</title>
+<style>
+  :root{--bg:#f4f6fb;--card:#fff;--fg:#1f2330;--muted:#6b7185;--line:#e6e8ef;--brand:#3b6bff;--brand-2:#2a55e0;--ok:#1f9d55;--warn:#c25a00;--err:#c02b2b;--tag:#eef2ff;--chip:#f0f2f7;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  a{color:var(--brand);text-decoration:none}
+  button{font:inherit;cursor:pointer}
+  .app{max-width:960px;margin:0 auto;padding:16px}
+  .banner{background:linear-gradient(90deg,#fff7e6,#fff);border:1px solid #ffd591;color:#8a5a00;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .banner strong{color:#6b3f00}
+  .toolbar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .toolbar label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+  .toolbar select,.toolbar input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;font:inherit;color:var(--fg)}
+  .toolbar .grow{flex:1}
+  .toolbar .mini{font-size:12px;color:var(--muted)}
+  .toolbar .btn-ghost{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;color:var(--fg)}
+  .layout{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:820px){.layout{grid-template-columns:1fr 320px}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .chat-header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .chat-header .title{font-weight:600}
+  .chat-header .sub{color:var(--muted);font-size:12px}
+  .chat-body{padding:14px 16px;max-height:560px;overflow:auto;background:#fafbfe}
+  .msg{display:flex;gap:10px;margin:10px 0}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;color:#556;font-weight:600;flex:0 0 32px}
+  .msg .body{flex:1;min-width:0}
+  .msg .name{font-size:12px;color:var(--muted);margin-bottom:2px}
+  .bubble{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-width:100%}
+  .bubble.system{background:#f6f7fb;color:var(--muted);border-style:dashed;font-size:12.5px}
+  .vote-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 0 rgba(20,20,40,.02)}
+  .vote-title{font-weight:600;font-size:15px;margin-bottom:4px}
+  .vote-meta{color:var(--muted);font-size:12px;margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .tag{display:inline-block;background:var(--tag);color:#3b4b9a;border-radius:999px;padding:1px 8px;font-size:12px}
+  .tag.ended{background:#eee;color:#666}
+  .options{display:flex;flex-direction:column;gap:6px;margin:8px 0 10px}
+  .opt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;position:relative;overflow:hidden}
+  .opt .bar{position:absolute;inset:0 auto 0 0;background:#eef2ff;width:0;transition:width .3s}
+  .opt .name{position:relative;flex:1;z-index:1}
+  .opt .count{position:relative;z-index:1;color:var(--muted);font-size:12px}
+  .opt input{position:relative;z-index:1}
+  .opt.mine{border-color:#c7d3ff;background:#f6f8ff}
+  .vote-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .btn{border:0;border-radius:8px;padding:8px 12px;font-weight:500}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand-2)}
+  .btn-secondary{background:#fff;color:var(--fg);border:1px solid var(--line)}
+  .btn-danger{background:#fff;color:var(--err);border:1px solid #f2c2c2}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .side .card{padding:14px}
+  .side h3{margin:0 0 8px;font-size:14px}
+  .side ul{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px}
+  .side .kv{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--line)}
+  .side .kv:last-child{border-bottom:0}
+  .side .kv b{color:var(--fg)}
+  /* modal */
+  .modal-mask{position:fixed;inset:0;background:rgba(20,25,50,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+  .modal-mask.open{display:flex}
+  .modal{background:#fff;border-radius:12px;max-width:440px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(20,25,50,.25)}
+  .modal h2{margin:0 0 6px;font-size:16px}
+  .modal p.sub{margin:0 0 12px;color:var(--muted);font-size:12.5px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .field label{font-size:12.5px;color:var(--muted)}
+  .field input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
+  .field .hint{font-size:12px;color:var(--muted)}
+  .field .err{font-size:12.5px;color:var(--err);display:none}
+  .field .err.show{display:block}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+  /* toast */
+  .toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:92vw}
+  .toast{background:#1f2330;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;transform:translateY(-6px);transition:all .2s;pointer-events:auto}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast.ok{background:#1f9d55}
+  .toast.err{background:#c02b2b}
+  .toast.warn{background:#c25a00}
+  .empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:13px}
+  .empty .icon{font-size:28px;margin-bottom:6px}
+  .badge-role{background:var(--chip);border-radius:999px;padding:2px 8px;font-size:12px;color:#444}
+  .row-flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .strike{text-decoration:line-through;color:var(--muted)}
+  .new-time{color:var(--ok);font-weight:600}
+  details.debug{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  details.debug summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+  details.debug pre{white-space:pre-wrap;font-size:12px;background:#f7f8fc;padding:8px;border-radius:6px;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="banner" role="note"><strong>交互原型 · 模拟数据</strong><span>下方数据、时间、成员均为演示用途，仅示意 PRD 中的用户结果，不代表真实产品行为，也未上线。</span></div>
+
+  <div class="toolbar" aria-label="演示开关">
+    <label>身份视角
+      <select id="roleSel" data-testid="role-switch">
+        <option value="initiator">发起人（张三）</option>
+        <option value="voter">已投票成员（李四）</option>
+        <option value="nonvoter">未投票成员（王五）</option>
+      </select>
+    </label>
+    <label>目标投票
+      <select id="voteSel" data-testid="vote-switch">
+        <option value="v1">v1 · 团建地点（未截止 · 我发起）</option>
+        <option value="v2">v2 · 周会时间（未截止 · 他人发起）</option>
+        <option value="v3">v3 · 值班安排（已截止 · 我发起）</option>
+        <option value="empty">空状态 · 群内暂无投票</option>
+      </select>
+    </label>
+    <label>失败演示
+      <select id="failSel" data-testid="fail-mode" title="仅在点击「确认修改」后触发，用于演示失败提示">
+        <option value="none">无（正常成功）</option>
+        <option value="expired">投票已截止（并发失效）</option>
+        <option value="forbidden">发起人已不具备操作条件</option>
+        <option value="system">系统未接受此次修改</option>
+      </select>
+    </label>
+    <span class="grow"></span>
+    <button class="btn-ghost" id="resetBtn" data-testid="reset-demo" type="button">重置演示</button>
+  </div>
+
+  <div class="layout">
+    <section class="card" aria-label="群会话">
+      <div class="chat-header">
+        <div class="avatar" aria-hidden="true">群</div>
+        <div>
+          <div class="title">产品小组（8）</div>
+          <div class="sub">你以 <span id="whoAmI" data-testid="self-name">张三</span>（<span id="whoRole" class="badge-role">发起人</span>）身份查看</div>
+        </div>
+      </div>
+      <div class="chat-body" id="chatBody" data-testid="chat-body">
+        <!-- rendered -->
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card">
+        <h3>当前投票信息</h3>
+        <div id="sidePanel" data-testid="side-panel">
+          <!-- rendered -->
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>PRD 覆盖点提示</h3>
+        <ul>
+          <li>R1 / AC1：发起人在未截止投票上看到入口</li>
+          <li>R2 / AC2：非发起人看不到入口</li>
+          <li>AC3：已截止投票无法再修改</li>
+          <li>R3 / AC4：成功后展示新截止时间</li>
+          <li>R4 / AC5：已投票成员收到一次变更提示</li>
+          <li>R5 / AC6：失败时保持原时间并明确提示</li>
+          <li>R6 / AC7：资格与已投记录不变</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <details class="debug">
+    <summary>调试面板（查看模拟数据状态）</summary>
+    <pre id="debugDump" data-testid="debug-dump"></pre>
+  </details>
+</div>
+
+<!-- Modal: edit deadline -->
+<div class="modal-mask" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+  <div class="modal">
+    <h2 id="editTitle">修改截止时间</h2>
+    <p class="sub">仅本次修改截止时间；投票题目、选项、可投票成员与已投记录不会变化。</p>
+    <div class="field">
+      <label for="newDeadline">新的截止时间</label>
+      <input type="datetime-local" id="newDeadline" data-testid="deadline-input">
+      <div class="hint" id="originalHint"></div>
+      <div class="err" id="deadlineErr" data-testid="deadline-error"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelEdit" data-testid="cancel-edit" type="button">取消</button>
+      <button class="btn btn-primary" id="confirmEdit" data-testid="confirm-edit" type="button">确认修改</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function(){
+  // ---------- Mock data ----------
+  var SELF = { initiator:{id:'u1',name:'张三'}, voter:{id:'u2',name:'李四'}, nonvoter:{id:'u3',name:'王五'} };
+  function inHours(h){ var d=new Date(); d.setMinutes(d.getMinutes()+Math.round(h*60)); return d; }
+  function fmt(d){ if(!d) return '-'; var p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function toInputVal(d){ var p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+
+  var initialState = function(){
+    return {
+      v1:{ id:'v1', title:'本周团建去哪儿？', creatorId:'u1', creatorName:'张三', deadline:inHours(6), createdAt:inHours(-18),
+           options:[{id:'a',name:'郊外野餐',votes:['u2','u6']},{id:'b',name:'桌游馆',votes:['u4']},{id:'c',name:'密室逃脱',votes:['u5','u7']}],
+           voterIds:['u2','u4','u5','u6','u7'], history:[] },
+      v2:{ id:'v2', title:'下周周会改到周几？', creatorId:'u9', creatorName:'赵六', deadline:inHours(24), createdAt:inHours(-4),
+           options:[{id:'a',name:'周二',votes:['u2']},{id:'b',name:'周三',votes:['u1','u5']},{id:'c',name:'周四',votes:[]}],
+           voterIds:['u1','u2','u5'], history:[] },
+      v3:{ id:'v3', title:'下月值班顺序', creatorId:'u1', creatorName:'张三', deadline:inHours(-2), createdAt:inHours(-48),
+           options:[{id:'a',name:'方案 A',votes:['u2','u4','u5']},{id:'b',name:'方案 B',votes:['u6']}],
+           voterIds:['u2','u4','u5','u6'], history:[] }
+    };
+  };
+
+  var state = { role:'initiator', voteKey:'v1', failMode:'none', notifiedFor:{}, votes:initialState() };
+
+  // ---------- DOM ----------
+  var $=id=>document.getElementById(id);
+  var chatBody=$('chatBody'), sidePanel=$('sidePanel'), whoAmI=$('whoAmI'), whoRole=$('whoRole');
+  var roleSel=$('roleSel'), voteSel=$('voteSel'), failSel=$('failSel'), resetBtn=$('resetBtn');
+  var editModal=$('editModal'), newDeadline=$('newDeadline'), originalHint=$('originalHint'), deadlineErr=$('deadlineErr');
+  var cancelEdit=$('cancelEdit'), confirmEdit=$('confirmEdit'), toastWrap=$('toastWrap'), debugDump=$('debugDump');
+
+  function selfObj(){ return SELF[state.role]; }
+  function currentVote(){ return state.voteKey==='empty' ? null : state.votes[state.voteKey]; }
+  function isEnded(v){ return v && v.deadline.getTime() <= Date.now(); }
+  function isInitiator(v){ return v && selfObj().id === v.creatorId; }
+  function hasVoted(v){ return v && v.voterIds.indexOf(selfObj().id) !== -1; }
+
+  function toast(msg,kind){
+    var t=document.createElement('div');
+    t.className='toast '+(kind||'');
+    t.setAttribute('role','status');
+    t.setAttribute('data-testid','toast-'+(kind||'info'));
+    t.textContent=msg;
+    toastWrap.appendChild(t);
+    requestAnimationFrame(()=>t.classList.add('show'));
+    setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),260); }, 3400);
+  }
+
+  function render(){
+    whoAmI.textContent = selfObj().name;
+    var roleLabel = state.role==='initiator'?'发起人视角':state.role==='voter'?'已投票成员视角':'未投票成员视角';
+    whoRole.textContent = roleLabel;
+    renderChat();
+    renderSide();
+    dumpDebug();
+  }
+
+  function renderChat(){
+    chatBody.innerHTML='';
+    var v = currentVote();
+    if(!v){
+      var e=document.createElement('div');
+      e.className='empty'; e.setAttribute('data-testid','empty-state');
+      e.innerHTML='<div class="icon">🗳️</div><div>群内暂无投票</div><div style="margin-top:4px">（演示：切换上方「目标投票」查看不同场景）</div>';
+      chatBody.appendChild(e); return;
+    }
+    // creator message with vote card
+    var m=document.createElement('div'); m.className='msg';
+    m.innerHTML='<div class="avatar">'+v.creatorName.slice(-1)+'</div><div class="body"><div class="name">'+v.creatorName+' · '+fmt(v.createdAt)+'</div></div>';
+    var body=m.querySelector('.body');
+    body.appendChild(renderVoteCard(v));
+    chatBody.appendChild(m);
+
+    // system messages from history (deadline change notifications)
+    v.history.forEach(function(h){
+      if(h.type==='deadline-changed'){
+        // notification is delivered to voters only per PRD R4/N6.
+        // For UX in this prototype we always show a system line in the chat area so demo is observable;
+        // but we clearly label the audience.
+        var s=document.createElement('div'); s.className='msg';
+        var audience = '仅向本投票的已投票成员推送';
+        s.innerHTML='<div class="avatar" aria-hidden="true">🔔</div><div class="body"><div class="name">系统提示 · '+fmt(h.at)+'</div><div class="bubble system" data-testid="change-notice">投票「'+v.title+'」的截止时间已由 <span class="strike">'+fmt(h.from)+'</span> 变更为 <span class="new-time">'+fmt(h.to)+'</span>。（'+audience+'；本次变更同一成员仅提示一次）</div></div>';
+        chatBody.appendChild(s);
+      }
+    });
+
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function renderVoteCard(v){
+    var wrap=document.createElement('div'); wrap.className='vote-card'; wrap.setAttribute('data-testid','vote-card');
+    var ended=isEnded(v);
+    var totalVotes = v.options.reduce((s,o)=>s+o.votes.length,0);
+    var titleRow = document.createElement('div');
+    titleRow.innerHTML='<div class="vote-title" data-testid="vote-title">'+v.title+'</div>';
+    wrap.appendChild(titleRow);
+
+    var meta=document.createElement('div'); meta.className='vote-meta';
+    meta.innerHTML =
+      '<span>发起人：'+v.creatorName+'</span>'+
+      '<span>截止时间：<b data-testid="deadline-display">'+fmt(v.deadline)+'</b></span>'+
+      '<span class="tag '+(ended?'ended':'')+'" data-testid="vote-status">'+(ended?'已截止':'进行中')+'</span>'+
+      '<span>已投 '+v.voterIds.length+' 人</span>';
+    wrap.appendChild(meta);
+
+    var opts=document.createElement('div'); opts.className='options';
+    v.options.forEach(function(o){
+      var mine=o.votes.indexOf(selfObj().id)!==-1;
+      var pct = totalVotes? Math.round(o.votes.length*100/totalVotes):0;
+      var row=document.createElement('label'); row.className='opt'+(mine?' mine':''); row.setAttribute('data-testid','option-'+o.id);
+      row.innerHTML='<span class="bar" style="width:'+pct+'%"></span>'+
+                    '<input type="radio" name="opt-'+v.id+'" disabled '+(mine?'checked':'')+' aria-label="'+o.name+'">'+
+                    '<span class="name">'+o.name+(mine?' · 我已选':'')+'</span>'+
+                    '<span class="count">'+o.votes.length+' 票</span>';
+      opts.appendChild(row);
+    });
+    wrap.appendChild(opts);
+
+    var actions=document.createElement('div'); actions.className='vote-actions';
+    var showEdit = isInitiator(v);
+    if(showEdit){
+      var btn=document.createElement('button');
+      btn.className='btn btn-primary';
+      btn.setAttribute('data-testid','edit-deadline-btn');
+      btn.type='button';
+      btn.textContent='修改截止时间';
+      if(ended){ btn.disabled=true; btn.title='已截止，无法修改（AC3）'; }
+      btn.addEventListener('click', openEdit);
+      actions.appendChild(btn);
+    }
+    // Non-initiator explicit note (AC2)
+    if(!showEdit){
+      var note=document.createElement('span'); note.className='mini'; note.style.color='var(--muted)'; note.style.fontSize='12px';
+      note.setAttribute('data-testid','no-edit-note');
+      note.textContent='仅发起人可修改截止时间';
+      actions.appendChild(note);
+    }
+    wrap.appendChild(actions);
+    return wrap;
+  }
+
+  function renderSide(){
+    var v=currentVote();
+    if(!v){ sidePanel.innerHTML='<div class="empty" style="padding:8px 0">未选中投票</div>'; return; }
+    var ended=isEnded(v);
+    sidePanel.innerHTML =
+      '<div class="kv"><span>标题</span><b>'+v.title+'</b></div>'+
+      '<div class="kv"><span>发起人</span><b>'+v.creatorName+'</b></div>'+
+      '<div class="kv"><span>状态</span><b>'+(ended?'已截止':'进行中')+'</b></div>'+
+      '<div class="kv"><span>截止时间</span><b data-testid="side-deadline">'+fmt(v.deadline)+'</b></div>'+
+      '<div class="kv"><span>已投人数</span><b>'+v.voterIds.length+'</b></div>'+
+      '<div class="kv"><span>你的身份</span><b>'+ (isInitiator(v)?'发起人': hasVoted(v)?'已投票成员':'未投票成员') +'</b></div>'+
+      '<div class="kv"><span>你可否修改</span><b>'+ (isInitiator(v) && !ended ? '可以（AC1）':'不可（AC2/AC3）') +'</b></div>';
+  }
+
+  function dumpDebug(){
+    var v=currentVote();
+    var payload={ role:state.role, self:selfObj(), voteKey:state.voteKey, failMode:state.failMode, notifiedFor:state.notifiedFor };
+    if(v){
+      payload.vote={ id:v.id, title:v.title, deadline:fmt(v.deadline), status:isEnded(v)?'ended':'active',
+        voters:v.voterIds.slice(), history:v.history.map(h=>({type:h.type,from:fmt(h.from),to:fmt(h.to),at:fmt(h.at)})) };
+    }
+    debugDump.textContent=JSON.stringify(payload,null,2);
+  }
+
+  // ---------- Edit flow ----------
+  function openEdit(){
+    var v=currentVote(); if(!v) return;
+    if(!isInitiator(v)){ toast('只有发起人可以修改截止时间','err'); return; }
+    if(isEnded(v)){ toast('该投票已截止，无法修改截止时间','err'); return; }
+    var suggested=new Date(v.deadline.getTime()+2*60*60*1000);
+    newDeadline.value=toInputVal(suggested);
+    originalHint.textContent='原截止时间：'+fmt(v.deadline)+'（演示中「不早于当前时间」等边界为示意，正式产品的边界见 PRD Q2）';
+    deadlineErr.classList.remove('show'); deadlineErr.textContent='';
+    editModal.classList.add('open');
+    setTimeout(()=>newDeadline.focus(),20);
+  }
+  function closeEdit(){ editModal.classList.remove('open'); }
+
+  function validate(){
+    var raw=newDeadline.value;
+    if(!raw){ return {ok:false,msg:'请选择新的截止时间'}; }
+    var d=new Date(raw);
+    if(isNaN(d.getTime())){ return {ok:false,msg:'时间格式不合法'}; }
+    if(d.getTime() <= Date.now()){ return {ok:false,msg:'新的截止时间需晚于当前时间（演示约束）'}; }
+    return {ok:true,date:d};
+  }
+
+  function applyFailure(kind){
+    var map={ expired:'该投票已截止，本次修改未生效', forbidden:'你已不具备该投票的操作条件，本次修改未生效', system:'系统未接受此次修改，请稍后再试' };
+    return map[kind] || '本次修改未生效';
+  }
+
+  confirmEdit.addEventListener('click', function(){
+    var v=currentVote(); if(!v) return;
+    var vr=validate();
+    if(!vr.ok){ deadlineErr.textContent=vr.msg; deadlineErr.classList.add('show'); return; }
+
+    // Failure demo: original deadline preserved (AC6)
+    if(state.failMode!=='none'){
+      var msg=applyFailure(state.failMode);
+      closeEdit();
+      toast('修改失败：'+msg+'。原截止时间保持为 '+fmt(v.deadline),'err');
+      render();
+      return;
+    }
+
+    // Success path
+    var oldDeadline=v.deadline;
+    v.deadline=vr.date;
+    v.history.push({ type:'deadline-changed', from:oldDeadline, to:vr.date, at:new Date() });
+    // Simulate one-time notification bookkeeping for voters (AC5)
+    var key=v.id+'@'+vr.date.getTime();
+    state.notifiedFor[key]=v.voterIds.slice();
+
+    closeEdit();
+    render();
+    toast('修改成功：新的截止时间为 '+fmt(vr.date)+'。已向 '+v.voterIds.length+' 位已投票成员发送一次变更提示。','ok');
+  });
+  cancelEdit.addEventListener('click', closeEdit);
+  editModal.addEventListener('click', function(e){ if(e.target===editModal) closeEdit(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && editModal.classList.contains('open')) closeEdit(); });
+
+  // ---------- Toolbar ----------
+  roleSel.addEventListener('change', function(){ state.role=roleSel.value; render(); });
+  voteSel.addEventListener('change', function(){ state.voteKey=voteSel.value; render(); });
+  failSel.addEventListener('change', function(){ state.failMode=failSel.value; toast('失败演示已切换：'+failSel.options[failSel.selectedIndex].text,'warn'); });
+  resetBtn.addEventListener('click', function(){
+    state={ role:roleSel.value, voteKey:voteSel.value, failMode:failSel.value, notifiedFor:{}, votes:initialState() };
+    render(); toast('演示已重置','ok');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
