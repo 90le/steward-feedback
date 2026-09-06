@@ -1,0 +1,32 @@
+{
+  "issueNumber": 8,
+  "prdVersion": 3,
+  "candidateDigest": null,
+  "author": {
+    "runtimeId": "product",
+    "runId": "steward-1628a95b9445bd239182ef23a947db589cd68c5188ec0996a9965ef1b7033f69"
+  },
+  "reviewer": {
+    "runtimeId": "reviewer",
+    "runId": "steward-a26b8ea91875ccbfa5b4b177b2ac4d4146ebabb07c44f2e6bca20943e1131c5c"
+  },
+  "verification": null,
+  "schemaVersion": 1,
+  "packagingVersion": "contained-v1",
+  "sourceDigest": "54cb9c40c16b7cbaa7a6564a4d807c86f097c7d9119cb68c7569c69a20c1acdf",
+  "sourceSha256": "0e6d3ca878f51df16ccbd455f44a807f3e06082ecd44a5b42de3fa045ea0744e",
+  "previewSha256": "87ba27862979f70cd5bf372141e6ba242eaefb5f788dc535fc648d3ca139cd24",
+  "backendPreviewSha256": "9c00e237fcbaef8e933a257706d96ece96d3839da85bbc6234b8bdb8897c8fe1",
+  "backend": false,
+  "sourcePath": "prototype-source/issue-8/prd-3-54cb9c40c16b",
+  "sourceUrl": "https://github.com/90le/steward-feedback/tree/main/prototype-source/issue-8/prd-3-54cb9c40c16b",
+  "previewPath": "docs/previews/contained-v1/issue-8/prd-3-87ba27862979",
+  "previewUrl": "https://90le.github.io/steward-feedback/previews/contained-v1/issue-8/prd-3-87ba27862979/index.html",
+  "previewServerSha256": null,
+  "sourceFiles": {
+    "index.html": {
+      "sha256": "0e6d3ca878f51df16ccbd455f44a807f3e06082ecd44a5b42de3fa045ea0744e",
+      "bytes": 23497
+    }
+  }
+}
