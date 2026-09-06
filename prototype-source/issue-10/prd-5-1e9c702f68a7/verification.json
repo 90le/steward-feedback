@@ -1,0 +1,47 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: AC1/R1 & AC2/R6: alice 设置 snooze 后列表隐藏为 snoozed；bob 视图不变\nok 1 - AC1/R1 & AC2/R6: alice 设置 snooze 后列表隐藏为 snoozed；bob 视图不变\n  ---\n  duration_ms: 257.34439\n  type: 'test'\n  ...\n# Subtest: AC7/AC13/AC18/R8 & AC9/R6: 过去时间失败保持状态；他人提醒 403\nok 2 - AC7/AC13/AC18/R8 & AC9/R6: 过去时间失败保持状态；他人提醒 403\n  ---\n  duration_ms: 176.473475\n  type: 'test'\n  ...\n# Subtest: AC10/R9 & AC15/R12: done 取消延后；同一人多入口一致（u_alice ↔ u_alice2）\nok 3 - AC10/R9 & AC15/R12: done 取消延后；同一人多入口一致（u_alice ↔ u_alice2）\n  ---\n  duration_ms: 154.925742\n  type: 'test'\n  ...\n# Subtest: AC4/AC5: 修改延后时间与取消延后；R5/AC6/AC14: 查看原消息不改状态\nok 4 - AC4/AC5: 修改延后时间与取消延后；R5/AC6/AC14: 查看原消息不改状态\n  ---\n  duration_ms: 151.480011\n  type: 'test'\n  ...\n# Subtest: AC3/R3: 到点重现——snoozeUntil 到期后 state 恢复 active\nok 5 - AC3/R3: 到点重现——snoozeUntil 到期后 state 恢复 active\n  ---\n  duration_ms: 1645.178102\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 3957.669765\n",
+  "stderr": "",
+  "tests": 5,
+  "passed": true,
+  "testDigest": "cbeac54faf621d75a0dd938e39b2f0fcaabee704e2405db4261d999e5bb366ba",
+  "candidateDigest": "f0e7ee4cf131502ce08ffa6a1191707ea234d0fc2fd44ca95329e4374b8c1d1a",
+  "checkedAt": "2026-09-06T19:58:59.899Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "候选 server.mjs 后端在受限 HTTP 层面覆盖 PRD 关键用户结果的可验证映射：AC1/R1 设置 snooze 后 state=snoozed 且返回权威 snoozeUntil；AC2/R6/AC9 跨人视图与操作 403 隔离；AC7/AC13/AC18 过去/缺失时间返回 400 并携带 now，提醒保持 active；AC4 再次 POST snooze 可修改时间；AC5 cancel 恢复 active；AC10/R9 done 清除 snoozeUntil 并变为 done，done 后再 snooze 被拒；AC15/AC16 u_alice2 与 u_alice 映射同一 owner，入口 B 立即看到相同 snoozed/done；AC3/R3 snoozeUntil 到期后 normalize 自动返回 state=active 且 expired=true；AC14 message 接口返回真实 body 与包含目标消息 id 的 chat 切片，且查看后 state/snoozeUntil/done 未变。",
+      "AC17/AC19 编辑输入保护、AC13 面向用户呈现、AC3 真实定位/高亮为浏览器 UI 层验收，本次未运行浏览器（未跑），仅从 HTTP 语义确认了后端配合前端所需的错误响应与状态保持能力；建议后续在可信 preview-server 中人工过 AC3/AC14/AC17/AC18/AC19。",
+      "未修改候选目录；测试写在 /artifacts 指定路径，使用 Node 内置 test/assert/fetch/child_process 与 net 选空闲端口，启动 server.mjs 子进程连 127.0.0.1 并在结束时 SIGTERM 关闭。"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/080ed1b62b2a63a07fe15d95f625d26a9497763b29419ab935808b347d325d0a/r1 node --test --test-reporter=tap /artifacts/jobs/080ed1b62b2a63a07fe15d95f625d26a9497763b29419ab935808b347d325d0a/r1/acceptance.test.mjs → tests 5 pass 5 fail 0 duration_ms≈3964",
+    "checks": [
+      {
+        "criterion": "AC1/R1 设置稍后再提醒后从活跃变为 snoozed，且 AC2/R6 不影响 bob 视图",
+        "passed": true
+      },
+      {
+        "criterion": "AC7/AC13/AC18 过去/缺失时间失败保持原状态并返回 server now；AC9/R6 跨用户操作 403 且不改动他人提醒",
+        "passed": true
+      },
+      {
+        "criterion": "AC10/R9 done 立即取消延后；AC15/AC16 同一人多入口（u_alice/u_alice2）看到一致的 snoozed→done；AC12 bob 视图不变；done 后再 snooze 被拒不返回成功",
+        "passed": true
+      },
+      {
+        "criterion": "AC4 再次 snooze 修改时间；AC5 cancel 立即恢复 active；AC14/R5 查看原消息返回真实内容与会话切片且不改变延后/处理状态；他人读原消息 403",
+        "passed": true
+      },
+      {
+        "criterion": "AC3/R3 snoozeUntil 到期后列表 state 自动恢复为 active（expired=true, done=false）",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器 UI 层 AC17/AC18/AC19 编辑输入保护、AC3/AC14 真实展示与高亮的可视验证",
+        "passed": false
+      }
+    ]
+  }
+}
