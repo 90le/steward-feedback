@@ -1,0 +1,53 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: 主流程：发起人修改未截止投票截止时间并只通知一次已投票成员\nok 1 - 主流程：发起人修改未截止投票截止时间并只通知一次已投票成员\n  ---\n  duration_ms: 218.854355\n  type: 'test'\n  ...\n# Subtest: 服务端独立校验：非发起人 403、已截止 409、失败不改状态\nok 2 - 服务端独立校验：非发起人 403、已截止 409、失败不改状态\n  ---\n  duration_ms: 77.584194\n  type: 'test'\n  ...\n# Subtest: 输入校验：坏 JSON / 过去时间 / 非法格式全部被 400 且状态不变\nok 3 - 输入校验：坏 JSON / 过去时间 / 非法格式全部被 400 且状态不变\n  ---\n  duration_ms: 20.412761\n  type: 'test'\n  ...\n# Subtest: 多次成功修改：新一次成功再产生一条新通知；选项/投票记录不变\nok 4 - 多次成功修改：新一次成功再产生一条新通知；选项/投票记录不变\n  ---\n  duration_ms: 16.084132\n  type: 'test'\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 4\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 428.994683\n",
+  "stderr": "",
+  "tests": 4,
+  "passed": true,
+  "testDigest": "9cea0c0842f3bdc2e2353b691e6959c3dea279d6f8d55d113092d1d5dc875be4",
+  "candidateDigest": "7f65b19be17f52c5a8627a777d03fd83ecd64522404f35d96cc366d0601f1c69",
+  "checkedAt": "2026-09-06T08:35:42.072Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "主流程通过：Alice 作为 p1 发起人 PATCH /api/polls/p1/deadline 返回 200，列表 deadline 更新为新值，Bob（已投票）收到 1 条 pollId=p1 通知含 old/newDeadline，Carol（未投）无通知，重复查询不新增（R1/R3/R4/AC1/AC4/AC5/N6）",
+      "服务端独立校验：非发起人 Bob→403 not_owner、管理员 u_admin→403 not_owner、匿名→401、Alice 改已截止 p3→409 poll_closed；所有失败分支后 p1/p3.deadline 不变，Bob 对 p1/p3 的选票记录不变，未产生通知（R2/R5/R6/AC2/AC3/AC6/AC7/N1）",
+      "输入校验：过去时间→400 deadline_not_future、非法字符串→400 bad_deadline、非法 JSON→400 bad_json、不存在投票→404 poll_not_found；所有失败后 deadline 保持不变、无通知（R5/AC6）",
+      "多次成功修改：Alice 连续两次修改 p1 均 200，最终 deadline 为最后一次值，选项集合未变；Bob 累计收到 2 条 changeSeq 不同的 p1 通知，选票 o1 未变（R6/AC7，Q4 原型不设上限一致）",
+      "浏览器/前端 UI 未执行（仅通过 HTTP 层验证后端契约与业务边界）"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/8ffd93144e75111a5cf5855a597096af4f540a7f45145cf6f5b861f32497ca5e/r1 node --test --test-reporter=tap /artifacts/jobs/8ffd93144e75111a5cf5855a597096af4f540a7f45145cf6f5b861f32497ca5e/r1/acceptance.test.mjs → 4 pass / 0 fail",
+    "checks": [
+      {
+        "criterion": "R1/AC1 发起人可对未截止投票修改截止时间",
+        "passed": true
+      },
+      {
+        "criterion": "R2/AC2/N1 非发起人（含管理员）无法修改",
+        "passed": true
+      },
+      {
+        "criterion": "R3/AC4 修改后列表显示新截止时间",
+        "passed": true
+      },
+      {
+        "criterion": "R4/AC5 已投票成员收到且仅一次变更通知，未投票成员不收到",
+        "passed": true
+      },
+      {
+        "criterion": "R5/AC3/AC6 已截止/无效输入/无权限时返回失败且原截止时间保持不变",
+        "passed": true
+      },
+      {
+        "criterion": "R6/AC7 修改前后投票资格与已投票记录未变",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器端 UI 交互（前端 DOM/testid 交互）",
+        "passed": false
+      }
+    ]
+  }
+}
