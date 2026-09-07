@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>incoming-webhooks GitHub 强制签名校验 · 原型</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", Arial, sans-serif; background: #f4f6f9; color: #1f2937; }
+  header { background: #0f172a; color: #f8fafc; padding: 14px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .badge { background: #1e293b; padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+  header .badge.api-on { background: #065f46; }
+  header .badge.api-off { background: #7c2d12; }
+  header .who { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  header select { background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 18px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+  section.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+  section.card h2 { margin: 0 0 12px; font-size: 15px; }
+  .muted { color: #64748b; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+  th { color: #475569; font-weight: 600; background: #f8fafc; }
+  tr.selected td { background: #eff6ff; }
+  tr:hover td { background: #f1f5f9; cursor: pointer; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .pill.on { background: #dcfce7; color: #166534; }
+  .pill.off { background: #f1f5f9; color: #475569; }
+  .pill.warn { background: #fee2e2; color: #991b1b; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .row label { min-width: 120px; color: #334155; }
+  input[type=text], textarea, select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; font: inherit; background: #fff; }
+  input[type=text] { flex: 1 1 220px; }
+  textarea { width: 100%; min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  button.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+  button.primary:hover { background: #1e40af; }
+  button.danger { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .toast-wrap { position: fixed; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+  .toast { padding: 10px 14px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 12px rgba(15,23,42,0.15); max-width: 360px; }
+  .toast.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .toast.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .toast.info { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+  code.mono { font-family: ui-monospace, Menlo, monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv dt { color: #64748b; }
+  .kv dd { margin: 0; }
+  .deliveries { max-height: 320px; overflow: auto; }
+  .simbox textarea { min-height: 70px; }
+  .note { background: #fef9c3; border: 1px solid #fde68a; padding: 8px 10px; border-radius: 6px; font-size: 12px; color: #713f12; margin-bottom: 10px; }
+  .footer-note { padding: 8px 14px; font-size: 12px; color: #64748b; text-align: center; }
+  details { margin-top: 8px; }
+  details summary { cursor: pointer; color: #1d4ed8; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>incoming-webhooks · GitHub 强制签名校验（原型）</h1>
+  <span id="mode-badge" class="badge api-off" data-testid="mode-badge">本地模拟数据</span>
+  <div class="who">
+    当前身份：
+    <select id="who-select" data-testid="who-select">
+      <option value="admin_alice">管理员 Alice（可读写）</option>
+      <option value="operator_bob">运维 Bob（可读写）</option>
+      <option value="viewer_carol">只读 Carol</option>
+      <option value="anonymous">未登录</option>
+    </select>
+  </div>
+</header>
+
+<div class="toast-wrap" id="toasts" data-testid="toasts"></div>
+
+<main>
+  <section class="card">
+    <h2>Webhook 列表</h2>
+    <div class="muted" style="margin-bottom:8px;">对应 <code class="mono">POST /v1/incoming-webhooks/:webhook_id/:token/github</code> 的多条订阅；<b>强制签名</b>=是否强制校验 <code class="mono">X-Hub-Signature-256</code>。</div>
+    <table data-testid="webhook-table">
+      <thead>
+        <tr><th>Webhook</th><th>路径</th><th>强制签名</th><th>Secret</th></tr>
+      </thead>
+      <tbody id="webhook-tbody"></tbody>
+    </table>
+
+    <h2 style="margin-top:18px;">当前选中的 Webhook</h2>
+    <div id="webhook-detail" data-testid="webhook-detail">
+      <div class="muted">请从上方表格选择一条 webhook。</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>模拟 GitHub 投递</h2>
+    <div class="note">
+      模拟 GitHub 向选中 webhook 的接收端点发送一条投递。<br>
+      服务端会根据当前配置决定：仅 URL token 鉴权（现状）／强制签名校验（本 Feature 提供的新能力）。UI 上看不到完整 secret 值。
+    </div>
+    <div class="simbox">
+      <div class="row">
+        <label>事件类型</label>
+        <select id="sim-event" data-testid="sim-event">
+          <option value="ping">ping</option>
+          <option value="push" selected>push</option>
+          <option value="pull_request">pull_request</option>
+          <option value="issues">issues</option>
+        </select>
+        <label style="min-width:auto;">Delivery ID</label>
+        <input type="text" id="sim-delivery" data-testid="sim-delivery" value="" style="flex:0 0 260px;" />
+      </div>
+      <div class="row">
+        <label>URL token</label>
+        <input type="text" id="sim-token" data-testid="sim-token" placeholder="从选中的 webhook 自动带入" />
+      </div>
+      <div class="row">
+        <label>用于签名的 secret</label>
+        <input type="text" id="sim-secret" data-testid="sim-secret" placeholder="可留空以模拟未携带签名 / 无效签名" />
+        <label style="min-width:auto;">
+          <input type="checkbox" id="sim-tamper" data-testid="sim-tamper" /> 篡改请求体
+        </label>
+      </div>
+      <div class="row">
+        <label>请求体（JSON）</label>
+      </div>
+      <textarea id="sim-body" data-testid="sim-body">{"zen":"Non-blocking is better than blocking.","repository":{"full_name":"acme/demo"}}</textarea>
+      <div class="row" style="margin-top:10px;">
+        <button class="primary" type="button" id="btn-send" data-testid="btn-send">发送模拟投递</button>
+        <button type="button" id="btn-refresh" data-testid="btn-refresh">刷新投递记录</button>
+        <span class="muted">签名算法：<code class="mono">sha256=HMAC_SHA256(secret, body)</code>。留空 secret 时不携带签名。</span>
+      </div>
+    </div>
+
+    <h2 style="margin-top:18px;">投递记录</h2>
+    <div class="muted" style="margin-bottom:6px;">列出最近的投递结果；被拒收会显示失败原因，用户 IM 中不会收到该消息。</div>
+    <div class="deliveries">
+      <table data-testid="delivery-table">
+        <thead><tr><th>时间</th><th>Webhook</th><th>事件</th><th>结果</th><th>原因</th></tr></thead>
+        <tbody id="delivery-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="footer-note">
+  原型说明：本页面演示 PRD v1（UR-1～UR-7、AC-1～AC-9）关键用户结果。仅使用模拟身份与内存数据，不代表 octo-server 真实实现或上线状态。
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var API_MODE = document.documentElement.getAttribute("data-api") === "1";
+  var badge = document.getElementById("mode-badge");
+  badge.textContent = API_MODE ? "已连接后端 /api" : "本地模拟数据";
+  badge.classList.remove("api-off", "api-on");
+  badge.classList.add(API_MODE ? "api-on" : "api-off");
+
+  // ---------- 本地模拟数据 ----------
+  var state = {
+    who: "admin_alice",
+    users: {
+      admin_alice: { name: "管理员 Alice", role: "admin" },
+      operator_bob: { name: "运维 Bob", role: "admin" },
+      viewer_carol: { name: "只读 Carol", role: "viewer" },
+      anonymous: { name: "未登录", role: "anon" }
+    },
+    webhooks: [
+      { id: "wh_prod_infra", token: "tkn_prod_infra_0001", label: "生产 · infra 通知", require_signature: false, has_secret: false, secret: "" },
+      { id: "wh_sec_audit", token: "tkn_sec_audit_0002", label: "安全审计（需强制签名）", require_signature: true, has_secret: true, secret: "s3cret-audit-A" },
+      { id: "wh_dev_sandbox", token: "tkn_dev_sandbox_0003", label: "研发沙箱", require_signature: true, has_secret: false, secret: "" }
+    ],
+    deliveries: [],
+    selectedId: "wh_sec_audit"
+  };
+
+  // ---------- 工具 ----------
+  function $ (id) { return document.getElementById(id); }
+  function esc (s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c];
+  }); }
+  function toast (kind, msg) {
+    var el = document.createElement("div");
+    el.className = "toast " + kind;
+    el.setAttribute("data-testid", "toast-" + kind);
+    el.textContent = msg;
+    $("toasts").appendChild(el);
+    setTimeout(function () { el.remove(); }, 4200);
+  }
+  function nowIso () { return new Date().toISOString().replace("T", " ").replace(/\..*/, ""); }
+  function randomHex (n) {
+    var s = ""; for (var i = 0; i < n; i++) s += Math.floor(Math.random()*16).toString(16); return s;
+  }
+
+  // WebCrypto HMAC-SHA256（用于前端模拟签名，仅演示用途）
+  async function hmacSha256Hex (secret, body) {
+    if (!secret) return "";
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    var sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+    var bytes = new Uint8Array(sig);
+    var hex = ""; for (var i = 0; i < bytes.length; i++) { var h = bytes[i].toString(16); if (h.length < 2) h = "0" + h; hex += h; }
+    return "sha256=" + hex;
+  }
+
+  // ---------- 渲染 ----------
+  function selectedWebhook () { return state.webhooks.find(function (w) { return w.id === state.selectedId; }); }
+
+  function renderTable () {
+    var tb = $("webhook-tbody");
+    tb.innerHTML = "";
+    state.webhooks.forEach(function (w) {
+      var tr = document.createElement("tr");
+      if (w.id === state.selectedId) tr.classList.add("selected");
+      tr.setAttribute("data-testid", "row-" + w.id);
+      tr.innerHTML =
+        "<td><div><b>" + esc(w.label) + "</b></div><div class='muted'>" + esc(w.id) + "</div></td>" +
+        "<td><code class='mono'>/v1/incoming-webhooks/" + esc(w.id) + "/&lt;token&gt;/github</code></td>" +
+        "<td>" + (w.require_signature
+          ? "<span class='pill on' data-testid='sig-on-" + esc(w.id) + "'>强制签名</span>"
+          : "<span class='pill off'>URL token</span>") +
+        "</td>" +
+        "<td>" + (w.has_secret
+          ? "<span class='pill on'>已配置</span>"
+          : (w.require_signature ? "<span class='pill warn'>未配置</span>" : "<span class='pill off'>未配置</span>")) +
+        "</td>";
+      tr.addEventListener("click", function () { state.selectedId = w.id; renderAll(); });
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderDetail () {
+    var w = selectedWebhook();
+    var d = $("webhook-detail");
+    if (!w) { d.innerHTML = "<div class='muted'>请选择 webhook。</div>"; return; }
+    var role = state.users[state.who].role;
+    var canWrite = role === "admin";
+
+    var html = "";
+    html += "<dl class='kv'>";
+    html += "<dt>Webhook 名称</dt><dd>" + esc(w.label) + "</dd>";
+    html += "<dt>Webhook ID</dt><dd><code class='mono'>" + esc(w.id) + "</code></dd>";
+    html += "<dt>URL token</dt><dd><code class='mono' data-testid='detail-token'>" + esc(w.token) + "</code> <span class='muted'>（原型明文展示，真实系统仅在创建时一次性显示）</span></dd>";
+    html += "<dt>强制签名</dt><dd>" + (w.require_signature ? "<b>已开启</b>" : "未开启") + "</dd>";
+    html += "<dt>Secret 状态</dt><dd data-testid='detail-secret-state'>" + (w.has_secret ? "已配置（不显示原文）" : "未配置") + "</dd>";
+    html += "</dl>";
+
+    html += "<div class='row' style='margin-top:12px;'>";
+    html += "<label><input type='checkbox' id='toggle-sig' data-testid='toggle-sig' " + (w.require_signature ? "checked" : "") + (canWrite ? "" : " disabled") + "> 强制校验 X-Hub-Signature-256</label>";
+    html += "<button class='primary' type='button' id='btn-save-sig' data-testid='btn-save-sig'" + (canWrite ? "" : " disabled") + ">保存开关</button>";
+    html += "</div>";
+
+    html += "<div class='row'>";
+    html += "<label>设置/重置 secret</label>";
+    html += "<input type='text' id='new-secret' data-testid='new-secret' placeholder='输入新 secret（保存后不再明文回显）' " + (canWrite ? "" : "disabled") + ">";
+    html += "<button type='button' id='btn-save-secret' data-testid='btn-save-secret'" + (canWrite ? "" : " disabled") + ">保存 secret</button>";
+    html += "<button type='button' class='danger' id='btn-clear-secret' data-testid='btn-clear-secret'" + (canWrite ? "" : " disabled") + ">清空 secret</button>";
+    html += "</div>";
+
+    if (!canWrite) {
+      html += "<div class='muted' data-testid='readonly-hint'>当前身份为只读或未登录，写操作已禁用；服务端也会独立校验身份，不仅依赖前端禁用。</div>";
+    }
+
+    html += "<details><summary>UR-6 相关说明</summary><div class='muted'>响应正文、错误提示、管理端读接口均不返回完整 secret 值。保存 secret 使用受控写操作。</div></details>";
+
+    d.innerHTML = html;
+
+    var tog = $("toggle-sig");
+    if (tog) {
+      $("btn-save-sig").addEventListener("click", function () { saveToggle(w.id, tog.checked); });
+    }
+    var bs = $("btn-save-secret"); if (bs) bs.addEventListener("click", function () { saveSecret(w.id, $("new-secret").value); });
+    var bc = $("btn-clear-secret"); if (bc) bc.addEventListener("click", function () { saveSecret(w.id, ""); });
+
+    // 自动带入 sim-token
+    var st = $("sim-token"); if (st && !st.dataset.userEdited) st.value = w.token;
+  }
+
+  function renderDeliveries (list) {
+    var tb = $("delivery-tbody");
+    tb.innerHTML = "";
+    list.slice().reverse().forEach(function (d, idx) {
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-testid", "delivery-row-" + idx);
+      var kind = d.accepted ? "on" : "warn";
+      tr.innerHTML =
+        "<td>" + esc(d.at) + "</td>" +
+        "<td>" + esc(d.webhook_id) + "</td>" +
+        "<td>" + esc(d.event) + "</td>" +
+        "<td><span class='pill " + kind + "' data-testid='delivery-status-" + idx + "'>" + (d.accepted ? "已受理" : "已拒收") + "</span></td>" +
+        "<td>" + esc(d.reason || "-") + "</td>";
+      tb.appendChild(tr);
+    });
+    if (list.length === 0) {
+      tb.innerHTML = "<tr><td colspan='5' class='muted'>暂无投递记录。点击「发送模拟投递」生成一条。</td></tr>";
+    }
+  }
+
+  function renderAll () { renderTable(); renderDetail(); }
+
+  // ---------- 后端联调（API_MODE=true）或本地状态更新 ----------
+  async function api (path, opts) {
+    opts = opts || {};
+    var headers = { "X-User-Id": state.who, "X-Acting-User": state.who };
+    if (opts.body) headers["Content-Type"] = "application/json";
+    var res = await fetch(path, { method: opts.method || "GET", headers: headers, body: opts.body || undefined });
+    var text = await res.text();
+    var data = null; try { data = text ? JSON.parse(text) : null; } catch (e) { data = { error: "invalid_json", raw: text }; }
+    return { status: res.status, ok: res.ok, data: data };
+  }
+
+  async function loadWebhooks () {
+    if (!API_MODE) { renderAll(); return; }
+    try {
+      var r = await api("/api/webhooks");
+      if (r.ok && r.data && Array.isArray(r.data.webhooks)) {
+        state.webhooks = r.data.webhooks;
+        renderAll();
+      } else {
+        toast("err", "加载 webhook 失败: " + (r.data && r.data.error || r.status));
+      }
+    } catch (e) { toast("err", "网络异常: " + e.message); }
+  }
+
+  async function loadDeliveries () {
+    if (!API_MODE) { renderDeliveries(state.deliveries); return; }
+    try {
+      var r = await api("/api/deliveries");
+      if (r.ok && r.data && Array.isArray(r.data.deliveries)) {
+        renderDeliveries(r.data.deliveries);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  async function saveToggle (id, on) {
+    if (API_MODE) {
+      var r = await api("/api/webhooks/" + id + "/signature", { method: "PUT", body: JSON.stringify({ require_signature: on }) });
+      if (r.ok) { toast("ok", "已保存强制签名开关"); await loadWebhooks(); }
+      else { toast("err", "保存失败：" + (r.data && r.data.error || r.status)); }
+      return;
+    }
+    var w = state.webhooks.find(function (x) { return x.id === id; });
+    if (state.users[state.who].role !== "admin") { toast("err", "无权限：只读身份"); return; }
+    w.require_signature = on;
+    toast("ok", "已保存（本地模拟）");
+    renderAll();
+  }
+
+  async function saveSecret (id, secret) {
+    if (API_MODE) {
+      var r = await api("/api/webhooks/" + id + "/secret", { method: "PUT", body: JSON.stringify({ secret: secret }) });
+      if (r.ok) { toast("ok", secret ? "已保存 secret（不回显原文）" : "已清空 secret"); $("new-secret") && ($("new-secret").value = ""); await loadWebhooks(); }
+      else { toast("err", "保存失败：" + (r.data && r.data.error || r.status)); }
+      return;
+    }
+    var w = state.webhooks.find(function (x) { return x.id === id; });
+    if (state.users[state.who].role !== "admin") { toast("err", "无权限：只读身份"); return; }
+    w.secret = secret; w.has_secret = !!secret;
+    toast("ok", secret ? "已保存 secret（本地模拟，不回显）" : "已清空 secret（本地模拟）");
+    $("new-secret") && ($("new-secret").value = "");
+    renderAll();
+  }
+
+  async function simulateDelivery () {
+    var w = selectedWebhook();
+    if (!w) { toast("err", "请先选择 webhook"); return; }
+    var event = $("sim-event").value;
+    var body = $("sim-body").value;
+    var secret = $("sim-secret").value;
+    var tamper = $("sim-tamper").checked;
+    var deliveryId = $("sim-delivery").value.trim() || ("dlv-" + randomHex(8));
+    var token = $("sim-token").value.trim();
+
+    var sentBody = body;
+    var sig = "";
+    if (secret) sig = await hmacSha256Hex(secret, body);
+    if (tamper) sentBody = body + " "; // 篡改：签名基于原 body，实际发送 body 多一个空格
+
+    if (API_MODE) {
+      // 用一个受控 API 让后端按同一逻辑处理，避免依赖 preview 允许任意路径
+      var payload = { webhook_id: w.id, token: token, event: event, delivery_id: deliveryId, signature: sig, body: sentBody };
+      try {
+        var r = await api("/api/simulate-delivery", { method: "POST", body: JSON.stringify(payload) });
+        if (r.ok && r.data) {
+          if (r.data.accepted) toast("ok", "已受理：" + event + " / " + deliveryId);
+          else toast("err", "已拒收：" + (r.data.reason || "unknown"));
+          await loadDeliveries();
+        } else {
+          toast("err", "调用失败：" + (r.data && r.data.error || r.status));
+        }
+      } catch (e) { toast("err", "网络异常：" + e.message); }
+      return;
+    }
+
+    // 本地模拟：与服务端逻辑对齐
+    var result = evaluateLocal(w, { token: token, event: event, signature: sig, body: sentBody });
+    state.deliveries.push({
+      at: nowIso(), webhook_id: w.id, event: event, accepted: result.accepted, reason: result.reason
+    });
+    if (result.accepted) toast("ok", "已受理：" + event + " / " + deliveryId);
+    else toast("err", "已拒收：" + result.reason);
+    renderDeliveries(state.deliveries);
+  }
+
+  // 与服务端一致的判定逻辑（前端本地模拟用）
+  async function evaluateLocalAsync () {} // 占位
+  function evaluateLocal (w, req) {
+    if (!req.token || req.token !== w.token) {
+      return { accepted: false, reason: "url_token_mismatch" };
+    }
+    if (w.require_signature) {
+      if (!w.has_secret || !w.secret) {
+        return { accepted: false, reason: "secret_missing" };
+      }
+      if (!req.signature) {
+        return { accepted: false, reason: "signature_missing" };
+      }
+      // 前端本地模式：secret 明文可比对（仅演示；真实系统只在服务端比较）
+      // 因需要 HMAC，简化处理：如果 secret 一致且未篡改则通过
+      // 实际这里应做 HMAC 校验；本地模拟已知 secret，直接由 send 端产生的 sig 判断可校验性：
+      // 简化：signature 非空 => 视为已由发送端用 sim-secret 生成，本地重新计算耗时，用一次同步近似：
+      // 使用异步 API，此处保留同步近似——我们已经知道 tamper 与 secret 一致性关系。
+      return { accepted: null, reason: "async" };
+    }
+    return { accepted: true, reason: "" };
+  }
+
+  // 更严谨的本地异步判定
+  async function evaluateLocalStrict (w, req) {
+    if (!req.token || req.token !== w.token) return { accepted: false, reason: "url_token_mismatch" };
+    if (w.require_signature) {
+      if (!w.has_secret || !w.secret) return { accepted: false, reason: "secret_missing" };
+      if (!req.signature) return { accepted: false, reason: "signature_missing" };
+      var expect = await hmacSha256Hex(w.secret, req.body);
+      if (expect !== req.signature) return { accepted: false, reason: "signature_mismatch" };
+    }
+    return { accepted: true, reason: "" };
+  }
+
+  // 覆盖 simulateDelivery 使其严格
+  simulateDelivery = async function () {
+    var w = selectedWebhook();
+    if (!w) { toast("err", "请先选择 webhook"); return; }
+    var event = $("sim-event").value;
+    var body = $("sim-body").value;
+    var secret = $("sim-secret").value;
+    var tamper = $("sim-tamper").checked;
+    var deliveryId = $("sim-delivery").value.trim() || ("dlv-" + randomHex(8));
+    var token = $("sim-token").value.trim();
+
+    var sig = "";
+    if (secret) sig = await hmacSha256Hex(secret, body);
+    var sentBody = tamper ? (body + " ") : body;
+
+    if (API_MODE) {
+      var payload = { webhook_id: w.id, token: token, event: event, delivery_id: deliveryId, signature: sig, body: sentBody };
+      try {
+        var r = await api("/api/simulate-delivery", { method: "POST", body: JSON.stringify(payload) });
+        if (r.ok && r.data) {
+          if (r.data.accepted) toast("ok", "已受理：" + event + " / " + deliveryId);
+          else toast("err", "已拒收：" + (r.data.reason || "unknown"));
+          await loadDeliveries();
+        } else { toast("err", "调用失败：" + (r.data && r.data.error || r.status)); }
+      } catch (e) { toast("err", "网络异常：" + e.message); }
+      return;
+    }
+
+    var result = await evaluateLocalStrict(w, { token: token, event: event, signature: sig, body: sentBody });
+    state.deliveries.push({ at: nowIso(), webhook_id: w.id, event: event, accepted: result.accepted, reason: result.reason });
+    if (result.accepted) toast("ok", "已受理：" + event + " / " + deliveryId);
+    else toast("err", "已拒收：" + result.reason);
+    renderDeliveries(state.deliveries);
+  };
+
+  // ---------- 事件绑定 ----------
+  $("who-select").addEventListener("change", function (e) {
+    state.who = e.target.value; renderAll(); toast("info", "已切换身份：" + state.users[state.who].name);
+  });
+  $("btn-send").addEventListener("click", function () { simulateDelivery(); });
+  $("btn-refresh").addEventListener("click", function () { loadDeliveries(); });
+  $("sim-token").addEventListener("input", function (e) { e.target.dataset.userEdited = "1"; });
+
+  // 首次渲染
+  $("sim-delivery").value = "dlv-" + randomHex(8);
+  renderAll();
+  if (API_MODE) { loadWebhooks(); loadDeliveries(); }
+  else { renderDeliveries(state.deliveries); }
+})();
+</script>
+<footer style="padding:16px;text-align:center;font-size:12px;color:#64748b">作者：Octo 小码（runtimeId: implementation） · 独立测试角色：Octo 小检（runtimeId: verification） · PRD v1 / 候选 r1</footer></body>
+</html>
