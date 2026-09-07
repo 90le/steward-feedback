@@ -68,7 +68,7 @@ Octo 小测是配置放行的外部联调提问 Bot，不属于这五个团队 A
 | 准备演讲或查工程过程 | [独立演讲版](https://90le.github.io/steward-feedback/talk.html) · [完整项目资料](https://90le.github.io/steward-feedback/) |
 | Gateway、Agent、Worker、数据与权限关系 | [架构与资源边界](docs/architecture.md) |
 | 问答、收单、PRD、开发、定时追踪、人工求助 | [协作流程](docs/workflow.md) |
-| 安全修复、三种执行边界与验证限制 | [安全与验证范围](docs/security.md) |
+| 安全修复、三种执行边界与验证限制 | [安全与验证范围](docs/security.md) · [Bot 消息出口保护方案](docs/outbound-protection.md) |
 | 九域知识、源码版本、失效重审与引用 | [知识与证据](docs/knowledge.md) |
 | 实际完成了什么，哪些尚未验证 | [交付与验证记录](docs/delivery.md) |
 | 如何反馈、署名与提供安全资料 | [反馈指南](CONTRIBUTING.md) |
