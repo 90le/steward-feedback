@@ -1,0 +1,66 @@
+{
+  "exitCode": 0,
+  "stdout": "TAP version 13\n# Subtest: 主流程：开启签名+设置secret+正确签名的模拟投递被受理\nok 1 - 主流程：开启签名+设置secret+正确签名的模拟投递被受理\n  ---\n  duration_ms: 210.548705\n  type: 'test'\n  ...\n# Subtest: 服务端身份校验：非 admin 不得修改开关或 secret，也不能通过前端 disabled 伪装\nok 2 - 服务端身份校验：非 admin 不得修改开关或 secret，也不能通过前端 disabled 伪装\n  ---\n  duration_ms: 38.766251\n  type: 'test'\n  ...\n# Subtest: 签名失败与 URL token 失败：全部拒收，reason 与业务边界一致\nok 3 - 签名失败与 URL token 失败：全部拒收，reason 与业务边界一致\n  ---\n  duration_ms: 23.700002\n  type: 'test'\n  ...\n# Subtest: AC-9：关闭强制签名后回到 URL token 鉴权，无需重启\nok 4 - AC-9：关闭强制签名后回到 URL token 鉴权，无需重启\n  ---\n  duration_ms: 7.163941\n  type: 'test'\n  ...\n# Subtest: GET / 由服务端注入 data-api=\"1\"，用于前后端联调标记\nok 5 - GET / 由服务端注入 data-api=\"1\"，用于前后端联调标记\n  ---\n  duration_ms: 4.449733\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 575.076981\n",
+  "stderr": "",
+  "tests": 5,
+  "passed": true,
+  "testDigest": "796be5fbbb4c61b10e09549bcd601df15935b59ecfe5371a314cadf5963d72f2",
+  "candidateDigest": "a93a263a358ba5bc55edd575caba77ba7cb42c565830d64301a2093e7cd24082",
+  "checkedAt": "2026-09-07T09:39:47.403Z",
+  "runner": "isolated-docker-node-test",
+  "report": {
+    "decision": "approve",
+    "reasons": [
+      "主流程：admin 开启强制签名并配置 secret 后，携带正确 HMAC-SHA256 签名的模拟投递被受理，deliveries 记录 accepted=true；GET /api/webhooks 与 PUT /api/webhooks/:id/secret 响应均不回显 secret 原文（覆盖 UR-1/AC-2/AC-3/UR-6/AC-8）",
+      "身份边界：viewer_carol、anonymous 及无 X-User-Id 头的请求 PUT signature/secret 均返回 403，且 GET /api/webhooks 显示状态未被改动；未知 webhook 返回 404（服务端独立校验，不仅依赖前端 disabled）",
+      "签名失败保持状态：signature_missing（无签名）、signature_mismatch（错误 secret 及篡改 body）、url_token_mismatch（错误 token）、secret_missing（wh_dev_sandbox 已开启签名但 secret 空，即便携带任意签名也 fail-closed）四种 reason 均按 PRD 语义返回，且写入 deliveries（覆盖 UR-4/AC-4/AC-5）",
+      "AC-9：关闭强制签名后同一进程内无签名请求即受理，错误 token 仍拒收，未重启",
+      "GET / 服务端注入 data-api=\"1\" 标记，与 README 描述一致，前后端联调路径可用",
+      "浏览器未跑：本次仅通过 HTTP 独立验收，未执行任何浏览器/DOM 测试；HTML 交互（身份切换 disabled、投递记录渲染、secret 明文回显禁用等 UI 层）未在真实浏览器中验证，仅由服务端接口与静态注入间接支撑"
+    ],
+    "testFile": "acceptance.test.mjs",
+    "executed": "CANDIDATE_DIR=/candidate/jobs/0ff828fc9af1cb88eba1b8a1c49cb4193ecff397cf312c45c12d96b5ec7c1255/r1 node --test --test-reporter=tap /artifacts/jobs/0ff828fc9af1cb88eba1b8a1c49cb4193ecff397cf312c45c12d96b5ec7c1255/r1/acceptance.test.mjs → tests 5, pass 5, fail 0, duration_ms 574",
+    "checks": [
+      {
+        "criterion": "AC-2/AC-3 主流程：开启签名+设置secret+正确签名投递被受理，读接口不回显 secret",
+        "passed": true
+      },
+      {
+        "criterion": "AC-8/UR-6 secret 不在 GET 列表或 PUT 响应正文中回显原文",
+        "passed": true
+      },
+      {
+        "criterion": "服务端身份边界：viewer/anonymous/无头请求 PUT 均 403，状态不变；未知 webhook 404",
+        "passed": true
+      },
+      {
+        "criterion": "AC-4 签名不匹配（错误 secret 或篡改 body）请求被拒收，reason=signature_mismatch",
+        "passed": true
+      },
+      {
+        "criterion": "AC-5 已开启签名但未配置 secret 时 fail-closed，reason=secret_missing，即便携带任意签名也拒收",
+        "passed": true
+      },
+      {
+        "criterion": "URL token 错误一律拒收，reason=url_token_mismatch",
+        "passed": true
+      },
+      {
+        "criterion": "AC-9 关闭签名后同进程内即刻回退到 URL token 鉴权行为",
+        "passed": true
+      },
+      {
+        "criterion": "deliveries 记录保留 accepted 与 reason，可供 UR-5/AC-7 演示",
+        "passed": true
+      },
+      {
+        "criterion": "GET / 服务端注入 data-api=\"1\"，前后端联调标记可用",
+        "passed": true
+      },
+      {
+        "criterion": "浏览器端 UI 行为（disabled 状态、页面渲染、WebCrypto 无后端模式）在真实浏览器中验证",
+        "passed": false
+      }
+    ]
+  }
+}
