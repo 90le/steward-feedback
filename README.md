@@ -1,10 +1,18 @@
-# Steward · Octo 产品管家与交付团队
+# Steward · Octo 产品支持与需求交付团队
 
 **从一个产品问题，到有依据的答复、可追踪的需求和可操作的演示。**
 
-Steward 在 OpenClaw 上运行五个 Agent，通过 Octo 接收问题和反馈，用本仓库保存 Issue、PRD、独立评审、演示代码与测试记录。Agent 负责调查与判断，后台 Worker 根据真实状态自动交接工作。
+Steward 是运行在 OpenClaw 中的业务插件，组织五个 Agent 处理 Octo 的产品问题与需求。你可以用日常语言问产品问题、提建议和查进展；小丘接待与调查，小助写需求，小衡独立评审，小码开发演示，小检实际测试。后台 Worker 保存进度、检查阶段与版本，再把工作交给下一位角色。
 
-[完整图文介绍](https://90le.github.io/steward-feedback/) · [三分钟读懂](docs/overview.md) · [查看需求池](https://github.com/90le/steward-feedback/issues) · [交付与验证](docs/delivery.md)
+[阅读产品介绍](https://90le.github.io/steward-feedback/public.html) · [术语与完整 Q&A](https://90le.github.io/steward-feedback/public.html#faq) · [查看需求池](https://github.com/90le/steward-feedback/issues) · [交付与验证](docs/delivery.md)
+
+产品介绍面向使用者和技术人员，包含使用场景、角色分工、协作流程、两条完整案例、架构、知识更新、权限、自动跟进、异常恢复和交付范围，并保留 **24 组问答**。正文与图示支持离线阅读。
+
+| 阅读目的 | 入口 |
+| --- | --- |
+| 独立了解产品、分享给其他人 | [公开产品介绍](https://90le.github.io/steward-feedback/public.html) |
+| 准备现场介绍或排练 | [独立演讲路线：1 / 5 / 20 分钟](https://90le.github.io/steward-feedback/talk.html) |
+| 深入查看工程过程与完整资料 | [完整项目介绍与讲解手册](https://90le.github.io/steward-feedback/) |
 
 ## 一条自动接续的流程
 
@@ -56,7 +64,8 @@ Octo 小测是配置放行的外部联调提问 Bot，不属于这五个团队 A
 
 | 想了解什么 | 文档 |
 | --- | --- |
-| 从零理解并完整讲解项目 | [完整 HTML](https://90le.github.io/steward-feedback/) · [项目介绍](docs/overview.md) |
+| 独立理解产品与常见问题 | [产品介绍 HTML](https://90le.github.io/steward-feedback/public.html) · [24 组 Q&A](https://90le.github.io/steward-feedback/public.html#faq) · [文字概览](docs/overview.md) |
+| 准备演讲或查工程过程 | [独立演讲版](https://90le.github.io/steward-feedback/talk.html) · [完整项目资料](https://90le.github.io/steward-feedback/) |
 | Gateway、Agent、Worker、数据与权限关系 | [架构与资源边界](docs/architecture.md) |
 | 问答、收单、PRD、开发、定时追踪、人工求助 | [协作流程](docs/workflow.md) |
 | 安全修复、三种执行边界与验证限制 | [安全与验证范围](docs/security.md) |
